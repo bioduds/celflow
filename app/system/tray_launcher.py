@@ -11,7 +11,7 @@ import threading
 import logging
 from typing import Dict, Any, Optional
 
-from app.system.macos_tray import create_tray_app, SelFlowTrayApp
+from app.system.macos_tray import create_tray_app, EnhancedSelFlowTrayApp
 from app.system.system_integration import SelFlowSystemIntegration
 
 
@@ -26,7 +26,7 @@ class TrayLauncher:
 
         # System components
         self.system_integration: Optional[SelFlowSystemIntegration] = None
-        self.tray_app: Optional[SelFlowTrayApp] = None
+        self.tray_app: Optional[EnhancedSelFlowTrayApp] = None
 
         # Threading
         self.system_thread: Optional[threading.Thread] = None
