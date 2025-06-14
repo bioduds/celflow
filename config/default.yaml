@@ -1,0 +1,224 @@
+# SelFlow Configuration - Silent Learning Mode
+
+# Application Settings
+app:
+  name: "SelFlow"
+  version: "0.1.0"
+  mode: "silent_observer"  # silent_observer, gentle_hints, quiet_assistant, full_integration
+  debug: false
+  log_level: "INFO"
+
+# Learning Phases
+learning:
+  # Current phase (0=silent, 1=hints, 2=assistant, 3=integrated)
+  current_phase: 0
+  
+  # Phase progression criteria
+  phase_progression:
+    phase_0_duration_days: 28  # 4 weeks of silent observation
+    phase_1_duration_days: 28  # 4 weeks of gentle hints
+    phase_2_duration_days: 56  # 8 weeks of quiet assistance
+    
+    # Automatic progression criteria
+    auto_progress: true
+    min_patterns_learned: 5
+    min_workflows_identified: 3
+    min_user_interactions: 10
+
+# Passive Data Collection
+data_collection:
+  # Screen monitoring
+  screen:
+    enabled: true
+    capture_frequency_seconds: 30  # How often to capture screen state
+    ocr_enabled: true
+    ui_element_detection: true
+    privacy_filter: true  # Filter out sensitive content
+    
+  # System events
+  system_events:
+    app_launches: true
+    window_changes: true
+    file_operations: true
+    keyboard_shortcuts: true
+    menu_selections: true
+    
+  # File system monitoring
+  file_system:
+    watch_directories: 
+      - "~/Desktop"
+      - "~/Documents" 
+      - "~/Downloads"
+      - "~/Projects"
+    track_patterns: true
+    organization_analysis: true
+    
+  # Temporal patterns
+  temporal:
+    work_hours_detection: true
+    routine_identification: true
+    app_usage_patterns: true
+    break_detection: true
+
+# Model Configuration
+models:
+  # Micro-model strategy
+  architecture: "micro_specialized"
+  
+  # Individual model limits
+  individual_model:
+    max_parameters: 50_000_000  # 50M params max per model
+    max_memory_mb: 200  # 200MB max per model
+    training_data_mb: 16  # 16MB training batches
+    
+  # Model pool management  
+  pool:
+    max_total_models: 20  # Maximum total models
+    max_memory_total_gb: 4  # Total memory limit for all models
+    specialization_types:
+      - "app_launching"
+      - "file_organization" 
+      - "workflow_sequences"
+      - "communication_patterns"
+      - "coding_workflows"
+      - "creative_workflows"
+      - "system_maintenance"
+    
+  # Training configuration
+  training:
+    enabled: true
+    technique: "lora"  # lora, qlora
+    continuous_learning: true
+    background_training: true
+    training_schedule: "idle_only"  # idle_only, scheduled, continuous
+    
+    # Resource limits
+    max_cpu_percent: 25  # Max CPU during training
+    max_memory_mb: 1024  # Max memory during training
+    thermal_throttling: true
+    battery_aware: true
+
+# Privacy and Security
+privacy:
+  # Data protection
+  encryption:
+    enabled: true
+    algorithm: "AES-256"
+    key_rotation_days: 30
+    
+  # Data retention
+  retention:
+    raw_data_days: 7    # Raw captures deleted after 7 days
+    patterns_days: 90   # Pattern data kept for 90 days
+    models_days: 365    # Models kept for 1 year
+    
+  # Content filtering
+  content_filter:
+    enabled: true
+    filter_passwords: true
+    filter_credit_cards: true
+    filter_personal_info: true
+    filter_sensitive_apps: 
+      - "Banking"
+      - "Password Manager"
+      - "VPN"
+      
+  # User control
+  user_control:
+    data_export_enabled: true
+    selective_deletion: true
+    learning_pause: true
+    complete_reset: true
+
+# System Integration
+system:
+  # Background operation
+  background:
+    launch_at_startup: true
+    run_invisibly: true
+    no_ui_phase_0: true
+    minimal_resources: true
+    
+  # Permissions (requested gradually)
+  permissions:
+    accessibility_api: false    # Requested in Phase 1
+    screen_recording: false    # Requested in Phase 1  
+    microphone_access: false   # Requested in Phase 2
+    automation_control: false # Requested in Phase 2
+    
+  # Performance limits
+  performance:
+    cpu_limit_percent: 5     # Very low impact during Phase 0
+    memory_limit_mb: 512     # Minimal memory footprint
+    disk_io_limit_mbps: 10   # Gentle disk access
+    network_disabled: true   # No network in Phase 0
+
+# UI Configuration (Phase-dependent)
+ui:
+  # Phase 0: Completely invisible
+  phase_0:
+    visible: false
+    notifications: false
+    system_tray: false
+    status_indicators: false
+    
+  # Phase 1: Subtle hints
+  phase_1:
+    gentle_notifications: true
+    learning_questions: true
+    progress_indicators: true
+    opt_out_easy: true
+    
+  # Phase 2+: Progressive revelation
+  phase_2_plus:
+    voice_interface: true
+    command_palette: true
+    workflow_designer: true
+    automation_controls: true
+
+# Learning Algorithms
+algorithms:
+  # Pattern recognition
+  pattern_recognition:
+    sequence_mining: true
+    temporal_clustering: true
+    frequency_analysis: true
+    context_correlation: true
+    
+  # Workflow identification
+  workflow_detection:
+    multi_app_sequences: true
+    repetitive_actions: true
+    error_recovery_patterns: true
+    efficiency_opportunities: true
+    
+  # Personalization
+  personalization:
+    preference_learning: true
+    style_adaptation: true
+    timing_optimization: true
+    error_correction: true
+
+# Monitoring and Metrics
+monitoring:
+  # System health
+  health_checks:
+    resource_usage: true
+    model_performance: true
+    learning_progress: true
+    user_satisfaction: true
+    
+  # Success metrics
+  metrics:
+    patterns_learned_count: 0
+    workflows_identified_count: 0
+    automation_success_rate: 0.0
+    user_interaction_count: 0
+    time_saved_minutes: 0
+    
+  # Reporting (internal only)
+  reporting:
+    daily_summaries: true
+    weekly_progress: true
+    phase_readiness: true
+    anonymized_analytics: false  # No analytics in Phase 0 

@@ -1,0 +1,155 @@
+# SelFlow .gitignore
+
+# Virtual Environment
+selflow_env/
+venv/
+env/
+.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+selflow.log
+
+# Data & Models (sensitive/large files)
+data/patterns/*.dat
+data/training/*.dat
+models/embryos/*.pt
+models/embryos/*.pth
+models/agents/*.pt
+models/agents/*.pth
+
+# Configuration files with secrets
+config/user.yaml
+config/secrets.yaml
+.env.local
+.env.production
+
+# Temporary files
+temp/
+tmp/
+*.tmp
+*.bak
+*.swp
+
+# AI/ML specific
+wandb/
+mlruns/
+.neptune/
+lightning_logs/
+
+# System-specific files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# PyTorch specific
+*.pth
+*.pt
+checkpoints/
+
+# Large binary files
+*.bin
+*.h5
+*.hdf5
+*.pkl
+*.pickle
+
+# Encrypted data
+*.enc
+*.encrypted
+
+# Local development
+local_test.py
+debug.py
+scratch.py 

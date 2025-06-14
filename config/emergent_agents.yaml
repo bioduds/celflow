@@ -1,0 +1,290 @@
+# SelFlow Emergent Agent Configuration
+
+# Embryo Pool Settings
+embryo_pool:
+  initial_count: 15  # Number of agent embryos to start with
+  max_concurrent: 20  # Maximum embryos active at once
+  min_survival_threshold: 0.3  # Minimum pattern detection score to survive
+  
+  # Embryo specifications
+  embryo_config:
+    base_model_size: 1_000_000  # 1M parameter pattern detector
+    data_buffer_limit_mb: 16    # Training trigger threshold
+    observation_window_hours: 168  # 1 week of observation minimum
+    pattern_update_interval: 3600  # Update patterns every hour
+    
+  # Natural selection parameters
+  selection:
+    culling_interval_hours: 24  # Check for weak embryos daily
+    performance_window_hours: 72  # Performance evaluation period
+    competition_threshold: 0.8  # Similarity threshold for competing embryos
+    survival_of_fittest: true   # Enable competitive culling
+
+# Agent Creator Configuration
+agent_creator:
+  # Core AI model for agent creation
+  creator_model:
+    name: "SmolLM-1.7B-AgentCreator" 
+    specialization: "agent_analysis"
+    quantization: "4bit"
+    device: "mps"
+    
+  # Analysis prompts and templates
+  prompts:
+    specialization_analysis: |
+      You are an AI Agent Creator. Analyze this user behavior data and design a specialized AI agent.
+      
+      User Activity Patterns:
+      {activity_patterns}
+      
+      Temporal Patterns:
+      {temporal_patterns}
+      
+      Application Usage:
+      {app_usage}
+      
+      File Operations:
+      {file_operations}
+      
+      Communication Patterns:
+      {communication_data}
+      
+      Interaction Preferences:
+      {interaction_style}
+      
+      Based on this data, design an AI agent with:
+      
+      1. DOMAIN: What specific area should this agent specialize in?
+      2. PERSONALITY: What personality traits would make it most effective?
+      3. CAPABILITIES: What should this agent be able to do?
+      4. TOOLS: Which tools would be most useful?
+      5. AUTONOMY: How independently should it operate?
+      6. INTRODUCTION: How should it introduce itself?
+      
+      Provide a JSON response with these fields.
+      
+    personality_design: |
+      Design a personality for an AI agent based on user interaction patterns:
+      
+      User Communication Style: {communication_style}
+      Preferred Interaction Mode: {interaction_mode}
+      Risk Tolerance: {risk_tolerance}
+      Detail Preference: {detail_level}
+      Proactivity Preference: {proactivity_level}
+      
+      Create a personality that will work well with this user.
+      
+    tool_selection: |
+      Available Tools:
+      {available_tools}
+      
+      Agent Specialization:
+      Domain: {domain}
+      User Patterns: {patterns}
+      Required Capabilities: {capabilities}
+      
+      Select the optimal toolset and explain your choices.
+
+# Available Tools and Capabilities
+available_tools:
+  # File System Tools
+  file_system:
+    - name: "file_organizer"
+      description: "Organize, move, and rename files"
+      permissions: ["file_system_write"]
+      autonomy_level: "high"
+      
+    - name: "duplicate_finder"
+      description: "Find and manage duplicate files"
+      permissions: ["file_system_read"]
+      autonomy_level: "medium"
+      
+    - name: "metadata_analyzer" 
+      description: "Analyze file metadata and content"
+      permissions: ["file_system_read"]
+      autonomy_level: "high"
+      
+  # Application Control
+  application_control:
+    - name: "app_launcher"
+      description: "Launch and manage applications"
+      permissions: ["process_control"]
+      autonomy_level: "high"
+      
+    - name: "window_manager"
+      description: "Control window positioning and state"
+      permissions: ["accessibility_api"]
+      autonomy_level: "medium"
+      
+    - name: "workspace_switcher"
+      description: "Manage multiple workspaces"
+      permissions: ["system_events"]
+      autonomy_level: "high"
+      
+  # Web and Browser
+  web_automation:
+    - name: "browser_controller"
+      description: "Control web browser and automate tasks"
+      permissions: ["browser_automation"]
+      autonomy_level: "medium"
+      
+    - name: "web_scraper"
+      description: "Extract data from web pages"
+      permissions: ["network_access"]
+      autonomy_level: "low"
+      
+    - name: "form_filler"
+      description: "Automatically fill web forms"
+      permissions: ["browser_automation"]
+      autonomy_level: "medium"
+      
+  # Communication
+  communication:
+    - name: "email_manager"
+      description: "Read, send, and organize emails"
+      permissions: ["email_access"]
+      autonomy_level: "medium"
+      
+    - name: "calendar_coordinator"
+      description: "Manage calendar and scheduling"
+      permissions: ["calendar_access"]
+      autonomy_level: "high"
+      
+    - name: "meeting_assistant"
+      description: "Prepare and manage meetings"
+      permissions: ["calendar_access", "file_system_read"]
+      autonomy_level: "medium"
+      
+  # Development Tools
+  development:
+    - name: "git_manager"
+      description: "Git version control operations"
+      permissions: ["file_system_write", "process_control"]
+      autonomy_level: "medium"
+      
+    - name: "ide_controller"
+      description: "Control IDE and development environment"
+      permissions: ["accessibility_api"]
+      autonomy_level: "low"
+      
+    - name: "documentation_finder"
+      description: "Search and retrieve documentation"
+      permissions: ["network_access"]
+      autonomy_level: "high"
+
+# Agent Training Configuration
+agent_training:
+  # Training resources per agent
+  training_limits:
+    max_parameters: 50_000_000  # 50M params max per agent
+    max_memory_mb: 200          # 200MB max during training
+    max_training_time_hours: 2  # 2 hour training limit
+    max_cpu_percent: 25         # CPU limit during training
+    
+  # Training technique
+  technique:
+    method: "qlora"             # Use QLoRA for efficient training
+    lora_rank: 16               # LoRA rank
+    lora_alpha: 32              # LoRA alpha
+    learning_rate: 0.0001       # Learning rate
+    batch_size: 4               # Training batch size
+    gradient_checkpointing: true # Memory optimization
+    
+  # Training schedule
+  scheduling:
+    max_concurrent_training: 2   # Max agents training simultaneously
+    training_queue_size: 5       # Queue size for pending training
+    priority_system: "fifo"      # First in, first out
+    resource_aware: true         # Monitor system resources
+
+# Agent Lifecycle Management
+lifecycle:
+  # Agent birth process
+  birth:
+    introduction_delay_hours: 24  # Wait 24h before introducing to user
+    capabilities_reveal: "gradual" # gradual or immediate
+    initial_autonomy: "low"        # Start with low autonomy
+    trust_building_period_days: 7  # Time to build trust
+    
+  # Agent evolution
+  evolution:
+    continuous_learning: true      # Agents keep learning after birth
+    capability_expansion: true     # Agents can gain new capabilities
+    personality_adaptation: true   # Personalities can evolve
+    inter_agent_learning: true     # Agents can learn from each other
+    
+  # Agent retirement
+  retirement:
+    performance_monitoring: true   # Monitor agent effectiveness
+    redundancy_detection: true     # Detect overlapping agents
+    user_satisfaction_threshold: 0.6  # Minimum user satisfaction
+    automatic_retirement: true     # Retire underperforming agents
+
+# Ecosystem Coordination
+ecosystem:
+  # Communication between agents
+  inter_agent_comm:
+    message_bus: "redis"           # Communication backend
+    protocol: "json_rpc"           # Communication protocol
+    encryption: true               # Encrypt inter-agent messages
+    rate_limiting: true            # Prevent message spam
+    
+  # Collaboration patterns  
+  collaboration:
+    task_handoffs: true            # Enable task handoffs between agents
+    resource_sharing: true         # Share computational resources
+    knowledge_sharing: true        # Share learned patterns
+    conflict_resolution: "voting"  # How to resolve conflicts
+    
+  # Ecosystem health monitoring
+  monitoring:
+    performance_metrics: true      # Track agent performance
+    resource_usage: true           # Monitor resource consumption
+    user_satisfaction: true        # Track user happiness
+    ecosystem_balance: true        # Ensure balanced specialization
+
+# Safety and Privacy
+safety:
+  # Agent creation safety
+  creation_safety:
+    sandbox_training: true         # Train agents in isolation
+    capability_review: true        # Review agent capabilities before activation
+    user_approval: "optional"      # User can approve new agents
+    rollback_mechanism: true       # Can undo agent creation
+    
+  # Runtime safety
+  runtime_safety:
+    action_logging: true           # Log all agent actions
+    risk_assessment: true          # Assess risks before actions
+    user_override: true            # User can always override agents
+    emergency_stop: true           # Emergency shutdown capability
+    
+  # Privacy protection
+  privacy:
+    data_anonymization: true       # Anonymize training data
+    sensitive_data_filtering: true # Filter sensitive information
+    user_consent: "explicit"       # Require explicit consent
+    data_retention_limits: true    # Automatic data cleanup
+
+# Performance and Resource Management
+performance:
+  # System resource limits
+  resource_limits:
+    total_memory_gb: 4             # Total memory for all agents
+    cpu_limit_percent: 30          # Max CPU usage for agents
+    disk_space_gb: 10              # Max disk space for agents
+    network_bandwidth_mbps: 50     # Max network usage
+    
+  # Optimization strategies
+  optimization:
+    model_quantization: true       # Use quantized models
+    memory_sharing: true           # Share memory between agents
+    lazy_loading: true             # Load agents on demand
+    resource_pooling: true         # Pool computational resources
+    
+  # Performance monitoring
+  monitoring:
+    resource_tracking: true        # Track resource usage
+    performance_profiling: true    # Profile agent performance
+    bottleneck_detection: true     # Detect performance bottlenecks
+    automatic_optimization: true   # Auto-optimize based on usage 
