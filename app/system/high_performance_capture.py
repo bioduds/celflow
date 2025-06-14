@@ -38,6 +38,13 @@ try:
 except ImportError:
     PSUTIL_AVAILABLE = False
 
+try:
+    from .event_persistence import create_event_persistence
+
+    PERSISTENCE_AVAILABLE = True
+except ImportError:
+    PERSISTENCE_AVAILABLE = False
+
 
 class HighPerformanceFileHandler(FileSystemEventHandler):
     """Ultra-fast file system event handler with batching"""
@@ -576,11 +583,16 @@ class HighPerformanceEventCapture:
         # Monitors
         self.file_handler = None
         self.app_monitor = None
-        self.activity_monitor = None
         self.observer = None
 
         # Event processing
         self.event_processor = None
+
+        # Persistence
+        self.persistence_manager = None
+        if PERSISTENCE_AVAILABLE and config.get("enable_persistence", True):
+            persistence_config = config.get("persistence", {})
+            self.persistence_manager = create_event_persistence(persistence_config)
 
     def set_event_callback(self, callback: Callable[[Dict[str, Any]], None]):
         """Set callback for individual events"""
@@ -590,6 +602,10 @@ class HighPerformanceEventCapture:
         """Start high-performance event capture"""
         self.logger.info("🚀 Starting High-Performance Event Capture...")
 
+        # Start persistence manager
+        if self.persistence_manager:
+            await self.persistence_manager.start()
+
         # Start event processor
         self.event_processor = asyncio.create_task(self._process_events())
 
@@ -598,9 +614,6 @@ class HighPerformanceEventCapture:
 
         # Start application monitoring
         asyncio.create_task(self._start_app_monitoring())
-
-        # Start system activity monitoring
-        asyncio.create_task(self._start_activity_monitoring())
 
         # Start performance monitoring
         asyncio.create_task(self._monitor_performance())
@@ -638,18 +651,20 @@ class HighPerformanceEventCapture:
 
     def _handle_event_batch(self, events: List[Dict[str, Any]]):
         """Handle batch of events"""
-        if not self.event_callback:
-            return
-
         # Update metrics
         self.total_events += len(events)
 
-        # Process each event
-        for event in events:
-            try:
-                self.event_callback(event)
-            except Exception as e:
-                self.logger.error(f"Event callback error: {e}")
+        # Persist events to database
+        if self.persistence_manager:
+            self.persistence_manager.queue_events_batch(events)
+
+        # Process each event through callback
+        if self.event_callback:
+            for event in events:
+                try:
+                    self.event_callback(event)
+                except Exception as e:
+                    self.logger.error(f"Event callback error: {e}")
 
     async def _process_events(self):
         """Background event processing"""
@@ -697,6 +712,10 @@ class HighPerformanceEventCapture:
 
         if self.event_processor:
             self.event_processor.cancel()
+
+        # Stop persistence manager
+        if self.persistence_manager:
+            await self.persistence_manager.stop()
 
         self.logger.info("✅ High-performance event capture stopped")
 

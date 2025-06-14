@@ -202,13 +202,27 @@ class SelFlowSystemIntegration:
         try:
             self.logger.info("Initializing system integration components...")
 
-            # Initialize high-performance event capture
+            # Initialize high-performance event capture with persistence
             use_hp_capture = self.config.get("use_high_performance", True)
             if use_hp_capture:
-                self.event_capture = HighPerformanceEventCapture(
-                    self.config.get("event_capture", {})
+                capture_config = self.config.get("event_capture", {})
+                # Enable persistence by default
+                capture_config.setdefault("enable_persistence", True)
+                capture_config.setdefault(
+                    "persistence",
+                    {
+                        "database_path": "data/events.db",
+                        "batch_size": 100,
+                        "batch_timeout": 5.0,
+                        "retention_days": 30,
+                        "cleanup_interval_hours": 24,
+                    },
                 )
-                self.logger.info("Using High-Performance Event Capture")
+
+                self.event_capture = HighPerformanceEventCapture(capture_config)
+                self.logger.info(
+                    "Using High-Performance Event Capture with Persistence"
+                )
             else:
                 self.event_capture = SystemEventCapture(
                     self.config.get("event_capture", {})
