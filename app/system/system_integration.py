@@ -22,6 +22,7 @@ from ..core.agent_manager import AgentManager
 from ..core.embryo_pool import EmbryoPool
 from .macos_tray import create_tray_app, SelFlowTrayApp
 from .event_capture import SystemEventCapture
+from .high_performance_capture import HighPerformanceEventCapture
 from .agent_interface import create_agent_interface, AgentChatInterface
 from .permissions import check_system_permissions, request_permissions
 
@@ -201,10 +202,17 @@ class SelFlowSystemIntegration:
         try:
             self.logger.info("Initializing system integration components...")
 
-            # Initialize event capture
-            self.event_capture = SystemEventCapture(
-                self.config.get("event_capture", {})
-            )
+            # Initialize high-performance event capture
+            use_hp_capture = self.config.get("use_high_performance", True)
+            if use_hp_capture:
+                self.event_capture = HighPerformanceEventCapture(
+                    self.config.get("event_capture", {})
+                )
+                self.logger.info("Using High-Performance Event Capture")
+            else:
+                self.event_capture = SystemEventCapture(
+                    self.config.get("event_capture", {})
+                )
 
             # Initialize agent interface
             self.agent_interface = create_agent_interface(self.agent_manager)
@@ -247,7 +255,13 @@ class SelFlowSystemIntegration:
             self.logger.info("Starting system integration components...")
 
             # Connect event capture to embryo pool
-            self.event_capture.set_event_callback(self.embryo_pool.process_event)
+            # Use sync wrapper for high-performance capture
+            if hasattr(self.embryo_pool, "process_event_sync"):
+                self.event_capture.set_event_callback(
+                    self.embryo_pool.process_event_sync
+                )
+            else:
+                self.event_capture.set_event_callback(self.embryo_pool.process_event)
 
             # Start event capture
             await self.event_capture.start_capture()

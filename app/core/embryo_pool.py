@@ -555,6 +555,28 @@ class EmbryoPool:
         """Process a system event (alias for feed_data for compatibility)"""
         return await self.feed_data(event)
 
+    def process_event_sync(self, event: dict) -> List[dict]:
+        """Synchronous wrapper for process_event for high-performance capture"""
+        try:
+            # Create a new event loop if none exists, or schedule in existing loop
+            try:
+                loop = asyncio.get_running_loop()
+                # If we're in an async context, schedule the coroutine
+                future = asyncio.ensure_future(self.feed_data(event))
+                # Don't wait for it to complete to avoid blocking
+                return []
+            except RuntimeError:
+                # No running loop, create one
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    return loop.run_until_complete(self.feed_data(event))
+                finally:
+                    loop.close()
+        except Exception as e:
+            self.logger.error(f"Error in sync event processing: {e}")
+            return []
+
     async def remove_embryo(self, embryo_id: str):
         """Remove an embryo from the pool"""
         if embryo_id in self.embryos:
