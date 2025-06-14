@@ -662,7 +662,20 @@ class HighPerformanceEventCapture:
         if self.event_callback:
             for event in events:
                 try:
-                    self.event_callback(event)
+                    # Handle both sync and async callbacks
+                    import inspect
+
+                    if inspect.iscoroutinefunction(self.event_callback):
+                        # Schedule async callback without waiting
+                        try:
+                            loop = asyncio.get_event_loop()
+                            loop.create_task(self.event_callback(event))
+                        except RuntimeError:
+                            # No event loop, skip
+                            pass
+                    else:
+                        # Synchronous callback
+                        self.event_callback(event)
                 except Exception as e:
                     self.logger.error(f"Event callback error: {e}")
 

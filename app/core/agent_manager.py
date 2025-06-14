@@ -72,6 +72,21 @@ class AgentManager:
 
         self.logger.info("✅ Agent Management System started successfully")
 
+    async def start_without_embryo_pool(self):
+        """Start the agent management system without starting embryo pool
+
+        Used when embryo pool is managed externally by system integration
+        """
+        self.logger.info("🚀 Starting SelFlow Agent Management System...")
+
+        # Skip embryo pool start - managed externally
+        self.logger.info("📋 Embryo pool managed by system integration")
+
+        # Start monitoring loop
+        self._monitoring_task = asyncio.create_task(self._monitor_lifecycle())
+
+        self.logger.info("✅ Agent Management System started successfully")
+
     async def stop(self):
         """Stop the agent management system"""
         self.logger.info("🛑 Stopping Agent Management System...")

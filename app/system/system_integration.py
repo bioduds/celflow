@@ -251,11 +251,12 @@ class SelFlowSystemIntegration:
         try:
             self.logger.info("Starting core components...")
 
-            # Start embryo pool
+            # Start embryo pool first (managed by system integration)
             await self.embryo_pool.start()
 
-            # Start agent manager
-            await self.agent_manager.start()
+            # Start agent manager WITHOUT starting its embryo pool
+            # (since we're managing it at the system level)
+            await self.agent_manager.start_without_embryo_pool()
 
             self.logger.info("✅ Core components started")
 
