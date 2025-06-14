@@ -145,4 +145,26 @@ objgraph>=3.6.0
 # Optional: Advanced Features
 faiss-cpu>=1.7.4     # Vector similarity search
 chromadb>=0.4.0      # Vector database for memory
-langchain>=0.1.0     # LLM orchestration framework 
+langchain>=0.1.0     # LLM orchestration framework
+
+# SelFlow - The Self-Creating AI Operating System
+# Phase 3: System Integration Dependencies
+
+# Core dependencies
+numpy>=1.21.0
+asyncio-mqtt>=0.11.0
+
+# Phase 3: macOS System Integration
+rumps>=0.4.0              # macOS system tray integration
+watchdog>=2.1.0           # File system event monitoring
+psutil>=5.8.0             # System resource monitoring and process management
+
+# Development and testing
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+pytest-mock>=3.10.0
+
+# Optional: Enhanced functionality
+pyobjc>=9.0               # Enhanced macOS integration (optional)
+pyobjc-framework-Cocoa    # Cocoa framework bindings (optional)
+pyobjc-framework-Quartz   # Quartz framework for screen capture (optional) 
