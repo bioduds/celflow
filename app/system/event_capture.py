@@ -524,9 +524,28 @@ class SystemEventCapture:
                 f"Captured event: {event['type']} - {event.get('action', 'N/A')}"
             )
 
-            # Forward to callback
+            # Forward to callback (handle async callbacks properly)
             if self.event_callback:
-                self.event_callback(event)
+                try:
+                    # If callback is async, schedule it properly
+                    import asyncio
+                    import inspect
+
+                    if inspect.iscoroutinefunction(self.event_callback):
+                        # Create a task to run the async callback
+                        try:
+                            loop = asyncio.get_event_loop()
+                            loop.create_task(self.event_callback(event))
+                        except RuntimeError:
+                            # No event loop running, skip this event
+                            self.logger.debug(
+                                "No event loop available for async callback"
+                            )
+                    else:
+                        # Synchronous callback
+                        self.event_callback(event)
+                except Exception as callback_error:
+                    self.logger.error(f"Error in event callback: {callback_error}")
 
         except Exception as e:
             self.logger.error(f"Error handling event: {e}")

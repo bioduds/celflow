@@ -54,15 +54,19 @@ class SelFlowSystemIntegration:
 
     def _setup_signal_handlers(self):
         """Setup graceful shutdown signal handlers"""
+        try:
 
-        def signal_handler(signum, frame):
-            self.logger.info(
-                f"Received signal {signum}, initiating graceful shutdown..."
-            )
-            self.shutdown_requested = True
+            def signal_handler(signum, frame):
+                self.logger.info(
+                    f"Received signal {signum}, initiating graceful shutdown..."
+                )
+                self.shutdown_requested = True
 
-        signal.signal(signal.SIGINT, signal_handler)
-        signal.signal(signal.SIGTERM, signal_handler)
+            signal.signal(signal.SIGINT, signal_handler)
+            signal.signal(signal.SIGTERM, signal_handler)
+        except ValueError as e:
+            # Signal handlers can only be set in main thread
+            self.logger.debug(f"Signal handlers not set (not main thread): {e}")
 
     async def initialize(self) -> bool:
         """Initialize all system components"""
@@ -250,14 +254,18 @@ class SelFlowSystemIntegration:
 
             # Start tray app (if available)
             if self.tray_app:
-                # Run tray app in background thread since it's blocking
-                import threading
-
-                tray_thread = threading.Thread(target=self.tray_app.run, daemon=True)
-                tray_thread.start()
-                self.logger.info("✅ Tray app started")
+                try:
+                    # Note: Tray app should be started on main thread
+                    # For now, we'll log that it's available but needs main thread
+                    self.logger.info("🎯 Tray app initialized and ready")
+                    tray_msg = (
+                        "💡 Use 'python selflow_tray.py' for full tray integration"
+                    )
+                    self.logger.info(tray_msg)
+                except Exception as e:
+                    self.logger.warning(f"⚠️ Tray app initialization issue: {e}")
             else:
-                self.logger.info("⚠️ Tray app not started (not available)")
+                self.logger.info("⚠️ Tray app not available (rumps not installed)")
 
             self.logger.info("✅ System integration components started")
 
@@ -338,8 +346,8 @@ class SelFlowSystemIntegration:
                 self.logger.warning("⚠️ Core components not running")
                 return
 
-            # Check embryo pool health
-            pool_status = await self.embryo_pool.get_pool_status()
+            # Check embryo pool health (use sync method)
+            pool_status = self.embryo_pool.get_pool_status()
             if pool_status.get("active_embryos", 0) == 0:
                 self.logger.debug("No active embryos - system learning")
 
