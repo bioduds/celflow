@@ -13,6 +13,7 @@ from .context_manager import ContextManager
 from .user_interface_agent import UserInterfaceAgent
 from .agent_orchestrator import AgentOrchestrator
 from .embryo_trainer import EmbryoTrainer
+from .system_controller import SystemController
 
 logger = logging.getLogger(__name__)
 
@@ -99,6 +100,10 @@ class CentralAIBrain:
             # Initialize Embryo Trainer
             self.embryo_trainer = EmbryoTrainer(self)
             logger.info("✅ EmbryoTrainer initialized")
+
+            # Initialize System Controller
+            self.system_controller = SystemController(self)
+            logger.info("✅ SystemController initialized")
 
             # Other agents will be initialized in subsequent phases
             logger.info("Specialized agents initialization completed")
@@ -487,6 +492,107 @@ Your core capabilities:
             uptime = f" (uptime: {uptime_seconds/3600:.1f}h)"
 
         return f"🟢 Central AI Brain is online{uptime} - {self.interaction_count} interactions processed"
+
+    async def translate_user_command(
+        self, user_command: str, user_context: Dict[str, Any] = None
+    ) -> Dict[str, Any]:
+        """Translate natural language command into system action"""
+        if not self.is_running or not self.system_controller:
+            return {
+                "success": False,
+                "error": "SystemController not available",
+                "action": None,
+            }
+
+        try:
+            system_action = await self.system_controller.translate_user_command(
+                user_command, user_context
+            )
+            return {
+                "success": True,
+                "action": system_action,
+                "action_id": system_action.action_id,
+            }
+
+        except Exception as e:
+            logger.error(f"Error translating user command: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "action": None,
+            }
+
+    async def execute_system_action(self, action) -> Dict[str, Any]:
+        """Execute a validated system action"""
+        if not self.is_running or not self.system_controller:
+            return {
+                "success": False,
+                "error": "SystemController not available",
+            }
+
+        try:
+            return await self.system_controller.execute_system_action(action)
+
+        except Exception as e:
+            logger.error(f"Error executing system action: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+            }
+
+    async def process_user_command(
+        self, user_command: str, user_context: Dict[str, Any] = None
+    ) -> Dict[str, Any]:
+        """Complete command processing: translate and execute"""
+        try:
+            # Translate command
+            translation_result = await self.translate_user_command(
+                user_command, user_context
+            )
+
+            if not translation_result.get("success"):
+                return translation_result
+
+            action = translation_result["action"]
+
+            # Check if action requires confirmation
+            if action.recommended_action.value in [
+                "request_confirmation",
+                "request_clarification",
+            ]:
+                return {
+                    "success": True,
+                    "requires_user_input": True,
+                    "message": action.user_feedback,
+                    "action_id": action.action_id,
+                    "recommended_action": action.recommended_action.value,
+                }
+
+            # Execute if safe
+            if action.recommended_action.value == "execute":
+                execution_result = await self.execute_system_action(action)
+                return {
+                    "success": execution_result.get("success", False),
+                    "message": execution_result.get("message", "Action completed"),
+                    "action_id": action.action_id,
+                    "results": execution_result,
+                }
+
+            # Deny unsafe actions
+            return {
+                "success": False,
+                "message": action.user_feedback,
+                "action_id": action.action_id,
+                "recommended_action": action.recommended_action.value,
+            }
+
+        except Exception as e:
+            logger.error(f"Error processing user command: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "message": "I encountered an error processing your command.",
+            }
 
 
 # Utility functions
