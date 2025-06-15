@@ -1,80 +1,36 @@
-# SelFlow - Self-Evolving AI Operating System Layer
+# SelFlow - Self-Creating AI Operating System
 
-**The first AI that creates itself - one agent at a time.**
+**The first AI system that creates specialized agents from your behavior patterns.**
 
-SelFlow is a revolutionary AI operating system layer that starts with simple pattern-detecting "embryos" and evolves into a personalized ecosystem of specialized AI agents through natural selection and biological-inspired evolution.
+SelFlow is a revolutionary AI operating system layer that observes your computer usage, learns behavioral patterns, and autonomously creates specialized AI agents tailored to your workflow. The system starts with simple pattern detection and evolves into a personalized ecosystem of intelligent agents.
 
-## 🧬 The Vision
+## 🧬 How It Works
 
-Imagine an AI system that:
-- **Observes silently** - Learning your patterns without interruption
-- **Evolves naturally** - Agents literally create themselves from your data
-- **Specializes uniquely** - Each installation becomes unique to its user
-- **Grows organically** - From 15 embryos to a full agent ecosystem
+SelFlow operates through a unique **embryo-to-agent evolution process**:
 
-## 🚀 Current Status: Phase 1 - The Embryo Pool
+1. **Silent Observation** - The system monitors your computer activity (file operations, app usage, etc.)
+2. **Pattern Detection** - Advanced algorithms identify behavioral patterns in your workflow
+3. **Embryo Development** - Virtual "embryos" develop specialized intelligence based on detected patterns
+4. **Agent Birth** - When embryos reach maturity, they become specialized AI agents
+5. **Ecosystem Growth** - Agents coordinate to provide intelligent assistance
 
-We've successfully implemented the foundational **Embryo Pool** system:
+## ✨ Key Features
 
-✅ **15 Agent Embryos** - Competing neural networks detecting patterns  
-✅ **Natural Selection** - Survival of the fittest pattern detectors  
-✅ **Privacy-First Design** - All processing happens locally  
-✅ **macOS Integration** - Native system tray with evolving interface  
-✅ **Pattern Detection** - Real neural networks learning user behavior  
+- 🔒 **Privacy-First**: All processing happens locally on your machine
+- 🧠 **Intelligent Learning**: Advanced pattern detection from real user behavior
+- 🤖 **Autonomous Agent Creation**: System creates agents without user intervention
+- 🎯 **Specialized Intelligence**: Each agent develops unique capabilities
+- 🖥️ **Native macOS Integration**: Beautiful system tray interface
+- 📊 **Real-Time Monitoring**: Live system status and performance metrics
 
-### Test Results
-```
-🧬 5 active embryos observing
-📊 50 events processed successfully
-🎯 Specializations emerging: file_operations
-🔒 Privacy filters active
-✅ All systems operational
-```
-
-## 🎭 The Agent Birth Process
-
-**Phase 1: Silent Observer (Current)**
-- 15 embryos compete to detect patterns
-- Each embryo has a 1M parameter neural network
-- Natural selection culls weak performers
-- Best embryos fill their 16MB data buffers
-
-**Phase 2: Agent Creation (Next)**
-- Birth-ready embryos trigger the Agent Creator AI
-- SmolLM-1.7B analyzes patterns and creates specialized agents
-- Each agent gets a unique personality and capabilities
-- First agent introduces itself to the user
-
-**Phase 3: Ecosystem Growth**
-- Agents coordinate and communicate
-- Voice interface becomes available
-- Proactive assistance emerges
-- System becomes indispensable
-
-## 🛠 Architecture
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    SelFlow Architecture                     │
-├─────────────────────────────────────────────────────────────┤
-│  🖥️  System Tray Interface (Evolving UI)                   │
-├─────────────────────────────────────────────────────────────┤
-│  🧬  Embryo Pool (15 competing neural networks)            │
-├─────────────────────────────────────────────────────────────┤
-│  🔍  Pattern Detection & Natural Selection Engine          │
-├─────────────────────────────────────────────────────────────┤
-│  🛡️  Privacy Filter (Remove PII, encrypt everything)       │
-├─────────────────────────────────────────────────────────────┤
-│  📡  System Event Monitor (Files, Apps, User Actions)      │
-└─────────────────────────────────────────────────────────────┘
-```
-
-## 🏁 Quick Start
+## 🚀 Quick Start
 
 ### Prerequisites
-- macOS (tested on macOS 14.3+)
-- Python 3.8+
-- 4GB RAM, 10GB storage
+
+- **macOS** (tested on macOS 14.3+)
+- **Python 3.8+**
+- **4GB RAM minimum**
+- **Accessibility permissions** (for system monitoring)
 
 ### Installation
 
@@ -83,136 +39,322 @@ We've successfully implemented the foundational **Embryo Pool** system:
 git clone https://github.com/bioduds/selflow.git
 cd selflow
 
-# Create virtual environment
+# Create and activate virtual environment
 python3 -m venv selflow_env
 source selflow_env/bin/activate
 
 # Install dependencies
-pip install torch numpy --index-url https://download.pytorch.org/whl/cpu
+pip install -r requirements.txt
 
-# Test the embryo pool
-python test_embryo_pool.py
+# Grant necessary permissions (follow prompts)
+python app/system/permissions.py
 ```
 
-### Expected Output
+### Running SelFlow
+
+The easiest way to run SelFlow is using the launcher script:
+
+```bash
+# Start the complete system
+./launch_selflow.sh start
+
+# Check system status
+./launch_selflow.sh status
+
+# Monitor system logs
+./launch_selflow.sh logs
+
+# Stop the system
+./launch_selflow.sh stop
+
+# Restart the system
+./launch_selflow.sh restart
+
+# Restart just the tray
+./launch_selflow.sh tray
 ```
-🧬 Starting SelFlow Embryo Pool Test...
-📊 Pool status: 5 active embryos, 50 events processed
-✅ Embryo Pool Test Completed Successfully!
+
+### System Tray Interface
+
+Once running, SelFlow appears in your macOS menu bar with a 🧬 DNA icon. Click it to access:
+
+- **System Status** - Current system state and statistics
+- **Active Agents** - View born agents and their specializations
+- **Embryo Pool** - Monitor embryo development progress
+- **Force Agent Birth** - Manually trigger agent creation
+- **Performance** - System resource usage and health
+- **Settings** - Configuration options
+
+## 🏗️ System Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    SelFlow Architecture                     │
+├─────────────────────────────────────────────────────────────┤
+│  🧬 System Tray (macOS Menu Bar Integration)               │
+├─────────────────────────────────────────────────────────────┤
+│  🤖 Agent Manager (Agent Lifecycle & Coordination)         │
+├─────────────────────────────────────────────────────────────┤
+│  🥚 Embryo Pool (Developing Agent Intelligence)            │
+├─────────────────────────────────────────────────────────────┤
+│  🔍 Pattern Detector (Behavioral Analysis Engine)          │
+├─────────────────────────────────────────────────────────────┤
+│  📡 Event Capture (System Activity Monitoring)             │
+├─────────────────────────────────────────────────────────────┤
+│  💾 SQLite Database (Event Storage & Pattern Data)         │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-## 🧠 How It Works
+## 🧠 Core Components
 
-### 1. Embryo Competition
-Each of the 15 embryos is a small neural network (1M parameters) that:
-- Observes system events (file operations, app launches, etc.)
-- Learns to detect specific patterns
-- Competes with other embryos for survival
-- Specializes in different domains (development, communication, creative work, etc.)
+### Event Capture System
+- **File Operations**: Monitors file creation, modification, deletion
+- **Application Usage**: Tracks app launches, focus changes, quit events
+- **System Events**: Captures system-level activities
+- **Privacy Filtering**: Automatically filters sensitive information
 
-### 2. Natural Selection
-- Embryos with low fitness scores are culled
-- New embryos are spawned to maintain population
-- Only the best pattern detectors survive
-- Specialization emerges through competition
+### Pattern Detection Engine
+- **Behavioral Analysis**: Identifies recurring patterns in user activity
+- **Temporal Patterns**: Detects time-based usage patterns
+- **Application Workflows**: Learns application usage sequences
+- **File Organization**: Understands file management patterns
 
-### 3. Agent Birth
-When an embryo fills its 16MB data buffer:
-- Agent Creator AI analyzes the embryo's patterns
-- Creates a specialized agent with unique personality
-- Agent introduces itself and begins helping
-- Ecosystem grows more capable over time
+### Embryo Pool
+- **Virtual Embryos**: Develop specialized intelligence from patterns
+- **Maturation Process**: Embryos grow by processing events and patterns
+- **Specialization**: Each embryo develops unique capabilities
+- **Birth Readiness**: Mature embryos trigger agent creation
+
+### Agent Manager
+- **Agent Creation**: Transforms mature embryos into specialized agents
+- **Lifecycle Management**: Handles agent birth, operation, and coordination
+- **Specialization Assignment**: Assigns roles based on detected patterns
+- **Performance Monitoring**: Tracks agent effectiveness and health
+
+## 📊 System Status
+
+You can monitor SelFlow's operation through:
+
+### Command Line
+```bash
+# System status
+./launch_selflow.sh status
+
+# Live logs
+./launch_selflow.sh logs
+
+# Database statistics
+sqlite3 data/events.db "SELECT COUNT(*) as total_events FROM events;"
+```
+
+### System Tray
+- Real-time event processing statistics
+- Agent birth notifications
+- Embryo development progress
+- System health indicators
+
+### Log Files
+- `logs/selflow_main.log` - Main system operations
+- `logs/selflow_tray.log` - System tray activities
+- `agent_births.log` - Agent creation records
 
 ## 🛡️ Privacy & Security
 
-**Privacy-First Design:**
-- All processing happens locally on your machine
-- Sensitive data (passwords, PII) filtered in real-time
-- User data never leaves your computer
-- Encrypted storage for all pattern data
-- Granular privacy controls
+SelFlow is designed with privacy as a core principle:
 
-**What We Filter:**
-- Passwords and API keys
-- Credit card numbers
-- Personal information (emails, phones)
-- Banking and financial applications
-- Any app marked as "sensitive"
+### Local Processing
+- **No Cloud Dependencies**: All processing happens on your machine
+- **No Data Transmission**: Your data never leaves your computer
+- **Offline Operation**: Works completely offline
 
-## 🗂 Project Structure
+### Data Protection
+- **Encrypted Storage**: All pattern data is encrypted
+- **Sensitive Data Filtering**: Automatically filters passwords, keys, PII
+- **Granular Controls**: Fine-grained privacy settings
+- **Secure Deletion**: Proper data cleanup on uninstall
+
+### Permissions
+- **Accessibility**: Required for system event monitoring
+- **Full Disk Access**: Needed for comprehensive file monitoring
+- **Screen Recording**: Optional, for advanced pattern detection
+
+## 🗂️ Project Structure
 
 ```
 selflow/
 ├── app/
 │   ├── core/
-│   │   ├── embryo_pool.py      # 15 competing embryos
-│   │   ├── pattern_detector.py # Neural pattern detection
-│   │   └── data_stream.py      # System event capture
+│   │   ├── agent_manager.py     # Agent lifecycle management
+│   │   ├── embryo_pool.py       # Embryo development system
+│   │   ├── pattern_detector.py  # Behavioral pattern analysis
+│   │   └── event_capture.py     # System activity monitoring
 │   ├── system/
-│   │   ├── tray_icon.py        # Evolving macOS interface
-│   │   └── permissions.py      # macOS permission handling
-│   └── privacy/
-│       ├── content_filter.py   # PII removal and encryption
-│       └── encryption.py       # Secure data storage
-├── models/
-│   └── embryos/                # Trained embryo networks
+│   │   ├── macos_tray.py        # System tray interface
+│   │   └── permissions.py       # macOS permission handling
+│   └── utils/
+│       ├── database.py          # SQLite database operations
+│       └── logging_config.py    # Logging configuration
 ├── data/
-│   ├── patterns/               # Detected patterns (encrypted)
-│   └── training/               # Training data buffers
-└── config/
-    └── default.yaml            # System configuration
+│   ├── events.db               # Event storage database
+│   └── patterns/               # Pattern analysis data
+├── logs/
+│   ├── selflow_main.log        # Main system logs
+│   └── selflow_tray.log        # Tray application logs
+├── config/
+│   └── default.yaml            # System configuration
+├── launch_selflow.sh           # System launcher script
+├── launch_tray.py              # Tray launcher
+├── run_selflow_live.py         # Main system runner
+└── requirements.txt            # Python dependencies
 ```
 
-## 🎪 Roadmap
+## 🎯 Agent Specializations
 
-### Phase 1: The Embryo Pool ✅
-- 15 competing neural embryos
-- Pattern detection and natural selection
-- Privacy-first data processing
-- macOS system integration
+SelFlow creates agents with various specializations based on your usage patterns:
 
-### Phase 2: Agent Creator (In Progress)
-- SmolLM-1.7B for agent creation
-- Dynamic agent personality generation
-- QLoRA training for specialization
-- First agent birth and introduction
+- **System Guardian** - System monitoring and maintenance
+- **File Manager** - File organization and management
+- **Workflow Optimizer** - Process automation and optimization
+- **Pattern Analyst** - Advanced behavioral analysis
+- **Task Coordinator** - Task management and scheduling
+- **Development Assistant** - Programming and development support
+- **Communication Manager** - Email and messaging optimization
 
-### Phase 3: Voice Interface
-- Wake word detection
-- Natural conversation with agents
-- Proactive assistance suggestions
-- Multi-agent coordination
+## 🔧 Configuration
 
-### Phase 4: Full Ecosystem
-- 10+ specialized agents
-- Predictive workflow automation
-- Cross-application integration
-- Seamless user experience
+### System Configuration (`config/default.yaml`)
+```yaml
+embryo_pool:
+  max_embryos: 15
+  birth_threshold_mb: 0.001  # Low threshold for quick births
+  
+agent_manager:
+  max_agents: 20
+  
+event_capture:
+  capture_rate: 1.0  # Events per second
+  
+privacy:
+  filter_sensitive: true
+  encrypt_storage: true
+```
+
+### Environment Variables
+```bash
+export SELFLOW_LOG_LEVEL=INFO
+export SELFLOW_DATA_DIR=./data
+export SELFLOW_CONFIG_DIR=./config
+```
+
+## 🚨 Troubleshooting
+
+### Common Issues
+
+**System won't start:**
+```bash
+# Check permissions
+python app/system/permissions.py
+
+# Check virtual environment
+source selflow_env/bin/activate
+pip install -r requirements.txt
+```
+
+**Tray crashes:**
+```bash
+# Restart just the tray
+./launch_selflow.sh tray
+
+# Check tray logs
+tail -f logs/selflow_tray.log
+```
+
+**No agents being born:**
+```bash
+# Check system status
+./launch_selflow.sh status
+
+# Force agent birth
+# Use "Force Agent Birth" in system tray menu
+```
+
+**Database issues:**
+```bash
+# Check database
+sqlite3 data/events.db ".tables"
+
+# Reset database (WARNING: loses all data)
+rm data/events.db
+./launch_selflow.sh restart
+```
+
+### Getting Help
+
+1. Check the logs: `./launch_selflow.sh logs`
+2. Verify system status: `./launch_selflow.sh status`
+3. Review permissions: `python app/system/permissions.py`
+4. Open an issue on GitHub with logs and system info
+
+## 🛣️ Roadmap
+
+### Current Status ✅
+- ✅ Event capture system
+- ✅ Pattern detection engine
+- ✅ Embryo pool development
+- ✅ Agent birth system
+- ✅ System tray interface
+- ✅ Crash-resistant operation
+
+### Next Phase 🚧
+- 🚧 Enhanced agent specialization
+- 🚧 Agent communication system
+- 🚧 Voice interface integration
+- 🚧 Predictive assistance
+- 🚧 Cross-application automation
+
+### Future Vision 🔮
+- 🔮 Natural language agent interaction
+- 🔮 Proactive workflow optimization
+- 🔮 Multi-device synchronization
+- 🔮 Advanced AI model integration
+- 🔮 Plugin ecosystem
 
 ## 🤝 Contributing
 
-We're building the future of human-AI collaboration! Here's how you can help:
+We welcome contributions! Here's how you can help:
 
-1. **Test the Embryo Pool** - Run the test and report issues
-2. **Improve Pattern Detection** - Enhance the neural networks
-3. **Add System Integrations** - Support more macOS features
-4. **Privacy Enhancements** - Strengthen the privacy filters
-5. **Agent Personalities** - Design unique agent characteristics
+1. **Report Issues** - Found a bug? Open an issue
+2. **Improve Documentation** - Help make the docs clearer
+3. **Add Features** - Implement new capabilities
+4. **Test & Feedback** - Try the system and share your experience
+5. **Privacy Enhancements** - Strengthen security and privacy
 
-## 📜 License
+### Development Setup
+```bash
+# Clone and setup
+git clone https://github.com/bioduds/selflow.git
+cd selflow
+python3 -m venv selflow_env
+source selflow_env/bin/activate
+pip install -r requirements.txt
 
-MIT License - Build the future freely.
+# Run tests
+python -m pytest tests/
 
-## 🎯 The Ultimate Goal
+# Start development
+./launch_selflow.sh start
+```
 
-SelFlow aims to create the first AI system where:
-- **Every installation is unique** - Shaped by its user's patterns
-- **Agents emerge naturally** - Through biological-style evolution
-- **Privacy is absolute** - Everything stays on your machine
-- **Assistance is invisible** - Until you need it most
+## 📄 License
 
-**Welcome to the evolution of AI assistants. Welcome to SelFlow.**
+SelFlow is released under the MIT License. See [LICENSE](LICENSE) for details.
+
+## 🙏 Acknowledgments
+
+- Built with ❤️ for the future of human-AI collaboration
+- Inspired by biological evolution and emergent intelligence
+- Thanks to the open-source community for foundational tools
 
 ---
 
-*"In nature, the most successful species are those that adapt best to their environment. SelFlow adapts to you."* 
+**SelFlow - Where AI Creates Itself** 🧬✨ 
