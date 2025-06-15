@@ -12,6 +12,7 @@ from .ollama_client import OllamaClient
 from .context_manager import ContextManager
 from .user_interface_agent import UserInterfaceAgent
 from .agent_orchestrator import AgentOrchestrator
+from .embryo_trainer import EmbryoTrainer
 
 logger = logging.getLogger(__name__)
 
@@ -94,6 +95,10 @@ class CentralAIBrain:
             # Initialize Agent Orchestrator
             self.agent_orchestrator = AgentOrchestrator(self)
             logger.info("✅ AgentOrchestrator initialized")
+
+            # Initialize Embryo Trainer
+            self.embryo_trainer = EmbryoTrainer(self)
+            logger.info("✅ EmbryoTrainer initialized")
 
             # Other agents will be initialized in subsequent phases
             logger.info("Specialized agents initialization completed")
@@ -397,14 +402,78 @@ Your core capabilities:
         }
 
     async def generate_training_labels(self, events: list) -> Dict[str, Any]:
-        """Generate intelligent training labels (placeholder)"""
+        """Generate intelligent training labels for events"""
 
-        # This will be implemented with the EmbryoTrainer agent
-        return {
-            "training_labels": [],
-            "confidence_scores": [],
-            "recommendations": ["Training label generation placeholder"],
-        }
+        if not self.is_running:
+            return {"success": False, "error": "Central AI Brain is not running"}
+
+        if not self.embryo_trainer:
+            return {"success": False, "error": "Embryo Trainer not available"}
+
+        try:
+            logger.info(f"🏷️ Generating training labels for {len(events)} events")
+
+            # Delegate to Embryo Trainer
+            result = await self.embryo_trainer.generate_training_labels(events)
+
+            logger.info(f"✅ Training labels generated: {result.get('success', False)}")
+            return result
+
+        except Exception as e:
+            logger.error(f"Error generating training labels: {e}")
+            return {"success": False, "error": str(e)}
+
+    async def validate_embryo_training(
+        self, embryo_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Validate embryo training quality and coherence"""
+
+        if not self.is_running:
+            return {"success": False, "error": "Central AI Brain is not running"}
+
+        if not self.embryo_trainer:
+            return {"success": False, "error": "Embryo Trainer not available"}
+
+        try:
+            embryo_id = embryo_data.get("id", "unknown")
+            logger.info(f"🧬 Validating embryo training: {embryo_id}")
+
+            # Delegate to Embryo Trainer
+            result = await self.embryo_trainer.validate_embryo_training(embryo_data)
+
+            logger.info(
+                f"✅ Embryo validation completed: {result.get('success', False)}"
+            )
+            return result
+
+        except Exception as e:
+            logger.error(f"Error validating embryo training: {e}")
+            return {"success": False, "error": str(e)}
+
+    async def assess_embryo_birth_readiness(
+        self, embryo_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Assess if embryo is ready for agent birth"""
+
+        if not self.is_running:
+            return {"success": False, "error": "Central AI Brain is not running"}
+
+        if not self.embryo_trainer:
+            return {"success": False, "error": "Embryo Trainer not available"}
+
+        try:
+            embryo_id = embryo_data.get("id", "unknown")
+            logger.info(f"🎯 Assessing birth readiness: {embryo_id}")
+
+            # Delegate to Embryo Trainer
+            result = await self.embryo_trainer.assess_birth_readiness(embryo_data)
+
+            logger.info(f"✅ Birth readiness assessed: {result.get('success', False)}")
+            return result
+
+        except Exception as e:
+            logger.error(f"Error assessing birth readiness: {e}")
+            return {"success": False, "error": str(e)}
 
     def get_status_summary(self) -> str:
         """Get a human-readable status summary"""
