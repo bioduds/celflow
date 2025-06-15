@@ -1,0 +1,57 @@
+# SelFlow Central AI Brain Configuration
+# Gemma 3:4B via Ollama Integration
+
+ai_brain:
+  model_name: "gemma3:4b"
+  base_url: "http://localhost:11434"
+  context_window: 8192
+  max_tokens: 2048
+  temperature: 0.7
+  timeout: 30
+  retry_attempts: 3
+  
+context_management:
+  max_conversation_history: 50
+  context_refresh_interval: 3600  # 1 hour in seconds
+  memory_persistence: true
+  max_context_tokens: 6000  # Leave room for response
+  
+performance:
+  response_timeout: 5.0
+  stream_responses: true
+  cache_responses: true
+  max_concurrent_requests: 3
+  
+# Agent specializations and capabilities
+agent_capabilities:
+  user_interface:
+    enabled: true
+    personality: "helpful_assistant"
+    proactive_suggestions: true
+    
+  agent_orchestrator:
+    enabled: true
+    max_parallel_agents: 5
+    coordination_timeout: 30
+    
+  embryo_trainer:
+    enabled: true
+    training_validation_threshold: 0.8
+    birth_readiness_threshold: 0.9
+    
+  system_controller:
+    enabled: true
+    safety_validation: true
+    command_confirmation: false  # Set to true for extra safety
+    
+  pattern_validator:
+    enabled: true
+    coherence_threshold: 0.75
+    cross_validation: true
+
+# Logging and monitoring
+logging:
+  level: "INFO"
+  ai_interactions: true
+  performance_metrics: true
+  error_tracking: true 

@@ -167,4 +167,11 @@ pytest-mock>=3.10.0
 # Optional: Enhanced functionality
 pyobjc>=9.0               # Enhanced macOS integration (optional)
 pyobjc-framework-Cocoa    # Cocoa framework bindings (optional)
-pyobjc-framework-Quartz   # Quartz framework for screen capture (optional) 
+pyobjc-framework-Quartz   # Quartz framework for screen capture (optional)
+
+# Central AI Brain Dependencies
+ollama>=0.1.0             # Ollama Python client for local AI models
+aiohttp>=3.8.0            # Async HTTP for Ollama API (already included above)
+tiktoken>=0.5.0           # Token counting for context management
+pydantic>=2.0.0           # Data validation for AI responses
+tenacity>=8.0.0           # Retry logic for AI calls 
