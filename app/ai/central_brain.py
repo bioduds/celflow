@@ -10,6 +10,8 @@ from datetime import datetime
 
 from .ollama_client import OllamaClient
 from .context_manager import ContextManager
+from .user_interface_agent import UserInterfaceAgent
+from .agent_orchestrator import AgentOrchestrator
 
 logger = logging.getLogger(__name__)
 
@@ -83,10 +85,23 @@ class CentralAIBrain:
             logger.error(f"❌ Error stopping Central AI Brain: {e}")
 
     async def _initialize_specialized_agents(self):
-        """Initialize specialized agent components (placeholder)"""
-        # These will be implemented in subsequent phases
-        logger.info("Specialized agents initialization (placeholder)")
-        pass
+        """Initialize specialized agent components"""
+        try:
+            # Initialize User Interface Agent
+            self.user_interface = UserInterfaceAgent(self)
+            logger.info("✅ UserInterfaceAgent initialized")
+
+            # Initialize Agent Orchestrator
+            self.agent_orchestrator = AgentOrchestrator(self)
+            logger.info("✅ AgentOrchestrator initialized")
+
+            # Other agents will be initialized in subsequent phases
+            logger.info("Specialized agents initialization completed")
+
+        except Exception as e:
+            logger.error(f"Failed to initialize specialized agents: {e}")
+            # Continue without specialized agents for now
+            logger.warning("Continuing without some specialized agents")
 
     async def process_user_input(
         self, user_message: str, context_type: str = "chat"
@@ -147,6 +162,31 @@ class CentralAIBrain:
                 "error": str(e),
                 "message": "I apologize, but I encountered an error processing your request. Please try again.",
             }
+
+    async def chat_with_user_interface_agent(
+        self, message: str, context: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """Process user input through the specialized User Interface Agent"""
+
+        if not self.is_running:
+            return {
+                "success": False,
+                "error": "Central AI Brain is not running",
+                "message": "I apologize, but I'm not currently available. Please try again later.",
+            }
+
+        if not self.user_interface:
+            # Fallback to basic processing if UserInterfaceAgent not available
+            return await self.process_user_input(message, "chat")
+
+        try:
+            # Use the specialized User Interface Agent
+            return await self.user_interface.process_chat_message(message, context)
+
+        except Exception as e:
+            logger.error(f"Error with User Interface Agent: {e}")
+            # Fallback to basic processing
+            return await self.process_user_input(message, "chat")
 
     async def stream_user_response(self, user_message: str, context_type: str = "chat"):
         """Stream response for real-time chat interface"""
@@ -255,6 +295,34 @@ Your core capabilities:
 
         except Exception as e:
             logger.error(f"Error coordinating system action: {e}")
+            return {"success": False, "error": str(e)}
+
+    async def orchestrate_complex_task(
+        self, task_description: str, context: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """Orchestrate complex tasks using multiple specialized agents"""
+
+        if not self.is_running:
+            return {"success": False, "error": "Central AI Brain is not running"}
+
+        if not self.agent_orchestrator:
+            return {"success": False, "error": "Agent Orchestrator not available"}
+
+        try:
+            logger.info(f"🎭 Orchestrating complex task: {task_description[:50]}...")
+
+            # Delegate to Agent Orchestrator
+            result = await self.agent_orchestrator.coordinate_task(
+                task_description, context
+            )
+
+            logger.info(
+                f"✅ Task orchestration completed: {result.get('success', False)}"
+            )
+            return result
+
+        except Exception as e:
+            logger.error(f"Error orchestrating complex task: {e}")
             return {"success": False, "error": str(e)}
 
     async def get_health_status(self) -> Dict[str, Any]:
