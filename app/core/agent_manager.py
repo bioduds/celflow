@@ -259,18 +259,24 @@ class AgentManager:
 
     def _record_birth(self, agent: ActiveAgent, embryo_data: Dict[str, Any]):
         """Record agent birth in history"""
-        birth_record = {
-            "event": "birth",
-            "timestamp": agent.creation_time.isoformat(),
-            "agent_id": agent.blueprint.agent_id,
-            "agent_name": agent.blueprint.name,
-            "specialization": agent.blueprint.specialization,
-            "embryo_id": embryo_data.get("embryo_id"),
-            "embryo_patterns": embryo_data.get("patterns_detected", 0),
-            "personality_traits": dict(agent.blueprint.personality_traits),
-        }
+        try:
+            birth_record = {
+                "event": "birth",
+                "timestamp": agent.creation_time.isoformat(),
+                "agent_id": getattr(agent.blueprint, "agent_id", "unknown"),
+                "agent_name": getattr(agent.blueprint, "name", "Unknown Agent"),
+                "specialization": getattr(agent.blueprint, "specialization", "general"),
+                "embryo_id": embryo_data.get("embryo_id", "unknown"),
+                "embryo_patterns": embryo_data.get("patterns_detected", 0),
+                "personality_traits": getattr(
+                    agent.blueprint, "personality_traits", {}
+                ),
+            }
 
-        self.agent_history.append(birth_record)
+            self.agent_history.append(birth_record)
+        except Exception as e:
+            self.logger.error(f"Error recording birth: {e}")
+            # Don't fail the birth process for recording issues
 
     def _record_retirement(self, agent: ActiveAgent):
         """Record agent retirement in history"""

@@ -406,7 +406,11 @@ class EmbryoPool:
             # Create initial embryos
             for i in range(self.max_embryos):
                 embryo_id = str(uuid.uuid4())
-                embryo = AgentEmbryo(embryo_id, self.config.get('embryo_config', {}))
+                # Pass the data_buffer_limit_mb directly to embryos
+                embryo_config = {
+                    "data_buffer_limit_mb": self.config.get("data_buffer_limit_mb", 16)
+                }
+                embryo = AgentEmbryo(embryo_id, embryo_config)
                 self.embryos[embryo_id] = embryo
 
             self.logger.info(f"Created {len(self.embryos)} initial embryos")
@@ -547,7 +551,11 @@ class EmbryoPool:
 
         while active_count < self.max_embryos:
             embryo_id = str(uuid.uuid4())
-            embryo = AgentEmbryo(embryo_id, self.config.get('embryo_config', {}))
+            # Pass the data_buffer_limit_mb directly to new embryos
+            embryo_config = {
+                "data_buffer_limit_mb": self.config.get("data_buffer_limit_mb", 16)
+            }
+            embryo = AgentEmbryo(embryo_id, embryo_config)
             self.embryos[embryo_id] = embryo
             active_count += 1
 
