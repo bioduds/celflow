@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """
-SelFlow macOS System Tray Integration - Crash-Resistant Version
+SelFlow macOS System Tray Integration with Central AI Chat
 
-Simplified system tray with robust error handling to prevent crashes.
+Enhanced system tray with direct chat interface to the Central AI Brain.
+Talk to your unified AI assistant directly from the menu bar!
 """
 
+import asyncio
 import json
 import logging
 import os
@@ -23,7 +25,234 @@ except ImportError:
     RUMPS_AVAILABLE = False
     print("Warning: rumps not available. Install with: pip install rumps")
 
+try:
+    import tkinter as tk
+    from tkinter import scrolledtext, messagebox
+
+    TKINTER_AVAILABLE = True
+except ImportError:
+    TKINTER_AVAILABLE = False
+    print("Warning: tkinter not available for chat interface")
+
 from app.core.agent_manager import AgentManager
+from app.ai.central_brain import CentralAIBrain, create_central_brain
+
+
+class SelFlowChatWindow:
+    """Chat window for direct communication with Central AI Brain"""
+
+    def __init__(self, central_brain: Optional[CentralAIBrain] = None):
+        self.central_brain = central_brain
+        self.window = None
+        self.chat_display = None
+        self.input_field = None
+        self.send_button = None
+        self.conversation_history = []
+
+    def create_window(self):
+        """Create the chat window"""
+        if not TKINTER_AVAILABLE:
+            return False
+
+        try:
+            # Create main window (use Tk() instead of Toplevel() for standalone window)
+            self.window = tk.Tk()
+            self.window.title("💬 Chat with SelFlow AI")
+            self.window.geometry("600x500")
+            self.window.resizable(True, True)
+
+            # Configure window
+            self.window.configure(bg="#f0f0f0")
+
+            # Create chat display area
+            chat_frame = tk.Frame(self.window, bg="#f0f0f0")
+            chat_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+            # Chat history display
+            self.chat_display = scrolledtext.ScrolledText(
+                chat_frame,
+                wrap=tk.WORD,
+                width=70,
+                height=25,
+                font=("SF Pro Display", 12),
+                bg="white",
+                fg="#333333",
+                state=tk.DISABLED,
+            )
+            self.chat_display.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
+
+            # Input frame
+            input_frame = tk.Frame(chat_frame, bg="#f0f0f0")
+            input_frame.pack(fill=tk.X, pady=(0, 5))
+
+            # Input field
+            self.input_field = tk.Text(
+                input_frame,
+                height=3,
+                font=("SF Pro Display", 12),
+                wrap=tk.WORD,
+                bg="white",
+                fg="#333333",
+            )
+            self.input_field.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
+
+            # Send button
+            self.send_button = tk.Button(
+                input_frame,
+                text="Send",
+                command=self._send_message,
+                font=("SF Pro Display", 12, "bold"),
+                bg="#007AFF",
+                fg="white",
+                relief=tk.FLAT,
+                padx=20,
+            )
+            self.send_button.pack(side=tk.RIGHT, fill=tk.Y)
+
+            # Bind Enter key
+            self.input_field.bind("<Return>", self._on_enter)
+            self.input_field.bind("<Shift-Return>", self._on_shift_enter)
+
+            # Add welcome message
+            self._add_message(
+                "SelFlow AI",
+                "👋 Hello! I'm your SelFlow AI assistant with 8 specialized agents working together. How can I help you today?",
+                is_ai=True,
+            )
+
+            # Focus on input
+            self.input_field.focus_set()
+
+            return True
+
+        except Exception as e:
+            print(f"Error creating chat window: {e}")
+            return False
+
+    def _send_message(self):
+        """Send message to AI and display response"""
+        if not self.input_field:
+            return
+
+        # Get user message
+        user_message = self.input_field.get("1.0", tk.END).strip()
+        if not user_message:
+            return
+
+        # Clear input field
+        self.input_field.delete("1.0", tk.END)
+
+        # Add user message to chat
+        self._add_message("You", user_message, is_ai=False)
+
+        # Send to AI in background thread
+        threading.Thread(
+            target=self._process_ai_response, args=(user_message,), daemon=True
+        ).start()
+
+    def _process_ai_response(self, user_message: str):
+        """Process AI response in background thread"""
+        try:
+            if self.central_brain:
+                # Use the Central AI Brain
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+
+                response = loop.run_until_complete(
+                    self.central_brain.process_user_input(user_message, "tray_chat")
+                )
+
+                if response.get("success"):
+                    ai_message = response.get(
+                        "message", "I'm sorry, I couldn't process that request."
+                    )
+                else:
+                    ai_message = (
+                        f"Error: {response.get('error', 'Unknown error occurred')}"
+                    )
+
+                loop.close()
+            else:
+                ai_message = "🤖 Central AI Brain is not available. Please ensure the system is running properly."
+
+            # Add AI response to chat (must be done in main thread)
+            self.window.after(
+                0, lambda: self._add_message("SelFlow AI", ai_message, is_ai=True)
+            )
+
+        except Exception as e:
+            error_message = f"Sorry, I encountered an error: {str(e)}"
+            self.window.after(
+                0, lambda: self._add_message("SelFlow AI", error_message, is_ai=True)
+            )
+
+    def _add_message(self, sender: str, message: str, is_ai: bool = False):
+        """Add message to chat display"""
+        if not self.chat_display:
+            return
+
+        self.chat_display.config(state=tk.NORMAL)
+
+        # Add timestamp
+        timestamp = datetime.now().strftime("%H:%M")
+
+        # Format message
+        if is_ai:
+            prefix = f"🤖 {sender} ({timestamp}):\n"
+            self.chat_display.insert(tk.END, prefix, "ai_sender")
+        else:
+            prefix = f"👤 {sender} ({timestamp}):\n"
+            self.chat_display.insert(tk.END, prefix, "user_sender")
+
+        self.chat_display.insert(tk.END, f"{message}\n\n", "message")
+
+        # Configure tags for styling
+        self.chat_display.tag_config(
+            "ai_sender", foreground="#007AFF", font=("SF Pro Display", 12, "bold")
+        )
+        self.chat_display.tag_config(
+            "user_sender", foreground="#34C759", font=("SF Pro Display", 12, "bold")
+        )
+        self.chat_display.tag_config("message", foreground="#333333")
+
+        self.chat_display.config(state=tk.DISABLED)
+        self.chat_display.see(tk.END)
+
+        # Store in conversation history
+        self.conversation_history.append(
+            {
+                "sender": sender,
+                "message": message,
+                "timestamp": timestamp,
+                "is_ai": is_ai,
+            }
+        )
+
+    def _on_enter(self, event):
+        """Handle Enter key press"""
+        if event.state & 0x1:  # Shift is pressed
+            return  # Allow newline
+        else:
+            self._send_message()
+            return "break"  # Prevent default behavior
+
+    def _on_shift_enter(self, event):
+        """Handle Shift+Enter for newline"""
+        return  # Allow default behavior (newline)
+
+    def show(self):
+        """Show the chat window"""
+        if self.window:
+            self.window.deiconify()
+            self.window.lift()
+            self.window.focus_force()
+            if self.input_field:
+                self.input_field.focus_set()
+
+    def hide(self):
+        """Hide the chat window"""
+        if self.window:
+            self.window.withdraw()
 
 
 class SelFlowTrayApp(rumps.App):
@@ -49,9 +278,44 @@ class SelFlowTrayApp(rumps.App):
         self.last_update = datetime.now()
         self.stats = {"events_today": 0, "agents_born": 0, "patterns_discovered": 0}
 
+        # Initialize Central AI Brain and Chat Window
+        self.central_brain = None
+        self.chat_window = None
+        self._initialize_ai_brain()
+
         # Setup interface
         self._setup_menu()
         self._start_monitoring()
+
+    def _initialize_ai_brain(self):
+        """Initialize the Central AI Brain for chat functionality"""
+        try:
+            # Create Central AI Brain in a separate thread to avoid blocking
+            def init_brain():
+                try:
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+
+                    self.central_brain = loop.run_until_complete(create_central_brain())
+
+                    # Create chat window
+                    self.chat_window = SelFlowChatWindow(self.central_brain)
+
+                    print("✅ Central AI Brain initialized for tray chat")
+                    loop.close()
+
+                except Exception as e:
+                    print(f"⚠️ Could not initialize Central AI Brain: {e}")
+                    # Create chat window without AI brain
+                    self.chat_window = SelFlowChatWindow(None)
+
+            # Initialize in background thread
+            threading.Thread(target=init_brain, daemon=True).start()
+
+        except Exception as e:
+            print(f"⚠️ Error initializing AI brain: {e}")
+            # Create chat window without AI brain
+            self.chat_window = SelFlowChatWindow(None)
 
     def _setup_menu(self):
         """Setup the tray menu with error handling"""
@@ -61,6 +325,8 @@ class SelFlowTrayApp(rumps.App):
             # Build menu items with error handling
             menu_items = [
                 rumps.MenuItem("SelFlow - Active", callback=None),
+                rumps.separator,
+                rumps.MenuItem("💬 Chat with AI", callback=self._safe_open_chat),
                 rumps.separator,
                 rumps.MenuItem("📊 System Status", callback=self._safe_show_status),
                 rumps.MenuItem("🤖 Active Agents", callback=self._safe_show_agents),
@@ -121,14 +387,46 @@ class SelFlowTrayApp(rumps.App):
 
             # Update icon based on activity
             if self.stats["events_today"] > 100:
-                self.title = "🧠✨"  # High activity
+                self.title = "🧬✨"  # High activity
             elif self.stats["events_today"] > 10:
-                self.title = "🧠💡"  # Some activity
+                self.title = "🧬💡"  # Some activity
             else:
-                self.title = "🧠"  # Basic
+                self.title = "🧬"  # Basic
 
         except Exception as e:
             self.logger.error(f"Error updating stats: {e}")
+
+    def _safe_open_chat(self, _):
+        """Safely open the chat window using subprocess approach"""
+        try:
+            import subprocess
+            import sys
+
+            # Use subprocess to launch the chat window in a separate process
+            # This avoids threading conflicts with the tray app
+            script_path = "test_chat_standalone.py"
+
+            if not os.path.exists(script_path):
+                rumps.alert(
+                    title="Chat Error",
+                    message="Chat script not found. Please ensure the system is properly installed.",
+                    ok="OK",
+                )
+                return
+
+            # Launch the chat window in a separate process
+            subprocess.Popen(
+                [sys.executable, script_path],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True,
+            )
+
+            print("✅ Chat window launched in separate process")
+
+        except Exception as e:
+            print(f"❌ Error launching chat: {e}")
+            rumps.alert(title="Error", message=f"Could not launch chat: {e}", ok="OK")
 
     def _safe_show_status(self, _):
         """Safely show system status"""

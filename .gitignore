@@ -289,4 +289,4 @@ logs/
 data/events.db*
 data/patterns/*.json
 *.pid
-.DS_Store 
+.DS_Store node_modules/

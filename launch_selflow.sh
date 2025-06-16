@@ -59,9 +59,65 @@ activate_venv() {
 # Function to kill existing processes
 cleanup_processes() {
     print_status "Cleaning up existing SelFlow processes..."
-    pkill -f "selflow|SelFlow|run_selflow|launch_tray" 2>/dev/null || true
+    
+    # First, try to stop processes gracefully using PID files
+    if [ -f "logs/selflow_main.pid" ]; then
+        MAIN_PID=$(cat logs/selflow_main.pid)
+        if kill -0 $MAIN_PID 2>/dev/null; then
+            print_status "Stopping main system (PID: $MAIN_PID)..."
+            kill $MAIN_PID 2>/dev/null || true
+            sleep 2
+            # Force kill if still running
+            if kill -0 $MAIN_PID 2>/dev/null; then
+                kill -9 $MAIN_PID 2>/dev/null || true
+            fi
+        fi
+        rm -f logs/selflow_main.pid
+    fi
+    
+    if [ -f "logs/selflow_tray.pid" ]; then
+        TRAY_PID=$(cat logs/selflow_tray.pid)
+        if kill -0 $TRAY_PID 2>/dev/null; then
+            print_status "Stopping system tray (PID: $TRAY_PID)..."
+            kill $TRAY_PID 2>/dev/null || true
+            sleep 2
+            # Force kill if still running
+            if kill -0 $TRAY_PID 2>/dev/null; then
+                kill -9 $TRAY_PID 2>/dev/null || true
+            fi
+        fi
+        rm -f logs/selflow_tray.pid
+    fi
+    
+    # Kill any remaining SelFlow processes by name patterns (excluding this script)
+    print_status "Killing remaining SelFlow processes..."
+    ps aux | grep -E "(selflow|SelFlow|run_selflow|launch_tray|macos_tray|test_chat)" | grep -v grep | grep -v "launch_selflow.sh" | awk '{print $2}' | xargs -r kill 2>/dev/null || true
+    sleep 1
+    
+    # Force kill any stubborn processes
+    ps aux | grep -E "(selflow|SelFlow|run_selflow|launch_tray|macos_tray|test_chat)" | grep -v grep | grep -v "launch_selflow.sh" | awk '{print $2}' | xargs -r kill -9 2>/dev/null || true
+    sleep 1
+    
+    # Kill any Python processes running SelFlow scripts (excluding this script)
+    ps aux | grep -E "(python|Python).*(selflow|run_selflow|launch_tray|macos_tray)" | grep -v grep | grep -v "launch_selflow.sh" | awk '{print $2}' | xargs -r kill -9 2>/dev/null || true
+    
+    # Additional cleanup for any Python processes in the project directory (excluding this script)
+    CURRENT_DIR=$(pwd)
+    ps aux | grep "$CURRENT_DIR" | grep -v grep | grep -v "launch_selflow.sh" | grep -E "(python|Python)" | awk '{print $2}' | xargs -r kill -9 2>/dev/null || true
+    
     sleep 2
-    print_success "Cleanup complete"
+    
+    # Verify cleanup - show any remaining SelFlow processes (excluding this script)
+    REMAINING=$(ps aux | grep -E "(selflow|SelFlow|run_selflow|launch_tray|macos_tray)" | grep -v grep | grep -v "launch_selflow.sh" | wc -l)
+    if [ "$REMAINING" -gt 0 ]; then
+        print_warning "Found $REMAINING remaining SelFlow processes:"
+        ps aux | grep -E "(selflow|SelFlow|run_selflow|launch_tray|macos_tray)" | grep -v grep | grep -v "launch_selflow.sh" | awk '{print "  PID " $2 ": " $11 " " $12 " " $13}'
+        print_status "Force killing remaining processes..."
+        ps aux | grep -E "(selflow|SelFlow|run_selflow|launch_tray|macos_tray)" | grep -v grep | grep -v "launch_selflow.sh" | awk '{print $2}' | xargs -r kill -9 2>/dev/null || true
+        sleep 1
+    fi
+    
+    print_success "Cleanup complete - all SelFlow processes terminated"
 }
 
 # Function to check system status
@@ -214,28 +270,8 @@ restart_tray() {
 stop_system() {
     print_status "Stopping SelFlow system..."
     
-    # Stop main system
-    if [ -f "logs/selflow_main.pid" ]; then
-        MAIN_PID=$(cat logs/selflow_main.pid)
-        if kill -0 $MAIN_PID 2>/dev/null; then
-            kill $MAIN_PID
-            print_success "Main system stopped"
-        fi
-        rm -f logs/selflow_main.pid
-    fi
-    
-    # Stop tray
-    if [ -f "logs/selflow_tray.pid" ]; then
-        TRAY_PID=$(cat logs/selflow_tray.pid)
-        if kill -0 $TRAY_PID 2>/dev/null; then
-            kill $TRAY_PID
-            print_success "System tray stopped"
-        fi
-        rm -f logs/selflow_tray.pid
-    fi
-    
-    # Cleanup any remaining processes
-    pkill -f "selflow|SelFlow|run_selflow|launch_tray" 2>/dev/null || true
+    # Use the comprehensive cleanup function
+    cleanup_processes
     
     print_success "SelFlow system stopped"
 }

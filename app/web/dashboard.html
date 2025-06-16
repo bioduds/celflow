@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SelFlow Meta-Learning Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-rows: auto 1fr 1fr;
+            gap: 20px;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .header {
+            grid-column: 1 / -1;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card h2 {
+            margin-bottom: 15px;
+            color: #4a5568;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-item {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .embryo-item {
+            background: #f7fafc;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+        }
+
+        .embryo-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .embryo-name {
+            font-weight: bold;
+            color: #2d3748;
+        }
+
+        .embryo-stage {
+            background: #667eea;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 15px;
+            font-size: 0.8em;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transition: width 0.5s ease;
+        }
+
+        .embryo-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            font-size: 0.9em;
+            color: #4a5568;
+        }
+
+        .agent-item {
+            background: #f0fff4;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid #48bb78;
+        }
+
+        .agent-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #48bb78;
+        }
+
+        .training-monitor {
+            background: #fef5e7;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .training-progress {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .neural-network {
+            width: 100%;
+            height: 200px;
+            background: #f7fafc;
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .pattern-graph {
+            width: 100%;
+            height: 250px;
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        .birth-celebration {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            z-index: 1000;
+            display: none;
+        }
+
+        .celebration-emoji {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+
+        .real-time-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #48bb78;
+            border-radius: 50%;
+            margin-left: 10px;
+            animation: pulse 1s infinite;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard">
+        <!-- Header -->
+        <div class="header">
+            <h1>🧬 SelFlow Meta-Learning Dashboard <span class="real-time-indicator"></span></h1>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-value" id="events-today">2,847</div>
+                    <div class="stat-label">Events Today</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="patterns-found">23</div>
+                    <div class="stat-label">Patterns Found</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="active-embryos">3</div>
+                    <div class="stat-label">Active Embryos</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="trained-agents">2</div>
+                    <div class="stat-label">Trained Agents</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="system-iq">847</div>
+                    <div class="stat-label">System IQ</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Embryo Nursery -->
+        <div class="card">
+            <h2>🥚 Embryo Nursery</h2>
+            <div id="embryo-list">
+                <div class="embryo-item">
+                    <div class="embryo-header">
+                        <span class="embryo-name">🐣 DevWorkflow-001</span>
+                        <span class="embryo-stage">Training</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 80%"></div>
+                    </div>
+                    <div class="embryo-stats">
+                        <div>Data: 847/1000</div>
+                        <div>Confidence: 0.84</div>
+                        <div>ETA: 2h 15m</div>
+                    </div>
+                </div>
+
+                <div class="embryo-item">
+                    <div class="embryo-header">
+                        <span class="embryo-name">🎉 AppState-002</span>
+                        <span class="embryo-stage pulse">Birth Ready</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 100%"></div>
+                    </div>
+                    <div class="embryo-stats">
+                        <div>Data: 1203/1000</div>
+                        <div>Confidence: 0.91</div>
+                        <div>🎉 Ready!</div>
+                    </div>
+                </div>
+
+                <div class="embryo-item">
+                    <div class="embryo-header">
+                        <span class="embryo-name">🥚 SysMaint-003</span>
+                        <span class="embryo-stage">Gestation</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 30%"></div>
+                    </div>
+                    <div class="embryo-stats">
+                        <div>Data: 156/500</div>
+                        <div>Confidence: 0.67</div>
+                        <div>ETA: 5h 42m</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Agent Status -->
+        <div class="card">
+            <h2>🤖 Agent Status</h2>
+            <div id="agent-list">
+                <div class="agent-item">
+                    <div class="agent-status">
+                        <span class="status-indicator"></span>
+                        <strong>DevelopmentWorkflowAgent</strong>
+                    </div>
+                    <div style="font-size: 0.9em; color: #4a5568;">
+                        <div>Deployed: 2 days ago</div>
+                        <div>Inferences: 1,847</div>
+                        <div>Accuracy: 94.2% (stable)</div>
+                        <div>Specialization: Code Analysis</div>
+                    </div>
+                </div>
+
+                <div class="agent-item">
+                    <div class="agent-status">
+                        <span class="status-indicator"></span>
+                        <strong>ApplicationStateAgent</strong>
+                    </div>
+                    <div style="font-size: 0.9em; color: #4a5568;">
+                        <div>Deployed: 1 day ago</div>
+                        <div>Inferences: 923</div>
+                        <div>Accuracy: 91.7% (improving)</div>
+                        <div>Specialization: App Optimization</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Meta-Learning Monitor -->
+        <div class="card">
+            <h2>🧠 Meta-Learning Monitor</h2>
+            <div class="training-monitor">
+                <div style="font-weight: bold; margin-bottom: 10px;">
+                    🎓 Teacher: Gemma 3:4b (Active)
+                </div>
+                <div class="training-progress">
+                    <span>Current Training: DevelopmentWorkflowAgent</span>
+                    <span>Epoch 47/100</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: 47%"></div>
+                </div>
+                <div
+                    style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.9em; margin-top: 10px;">
+                    <div>Loss: 0.234 ↓</div>
+                    <div>Accuracy: 87.3% ↑</div>
+                    <div>Overfitting: Low ✅</div>
+                    <div>ETA: 1h 23m</div>
+                </div>
+            </div>
+
+            <div style="margin-top: 15px;">
+                <strong>Training Queue:</strong>
+                <div style="margin-top: 10px; font-size: 0.9em;">
+                    <div>1. AppStateAgent (Ready)</div>
+                    <div>2. SystemMaintenanceAgent (Pending)</div>
+                    <div>3. NewPatternAgent (Detected)</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pattern Analysis -->
+        <div class="card">
+            <h2>🔬 Pattern Analysis</h2>
+            <div class="pattern-graph">
+                <canvas id="pattern-chart"></canvas>
+            </div>
+        </div>
+
+        <!-- Neural Network Visualization -->
+        <div class="card">
+            <h2>🧠 Neural Network Training</h2>
+            <div class="neural-network" id="neural-viz">
+                <canvas id="network-canvas" width="100%" height="200"></canvas>
+            </div>
+            <div style="margin-top: 15px; font-size: 0.9em; color: #4a5568;">
+                <div>Architecture: 512 → 256 → 128 → 64 → 8</div>
+                <div>Parameters: 847,293</div>
+                <div>Training Speed: 23.4 samples/sec</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Birth Celebration Modal -->
+    <div class="birth-celebration" id="birth-modal">
+        <div class="celebration-emoji">🎉</div>
+        <h2>Agent Born!</h2>
+        <p>DevelopmentWorkflowAgent has successfully completed training and is now deployed!</p>
+        <button onclick="closeBirthModal()"
+            style="margin-top: 20px; padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">
+            Celebrate! 🎉
+        </button>
+    </div>
+
+    <script>
+        // Real-time updates simulation
+        function updateDashboard() {
+            // Update stats with slight variations
+            const eventsToday = document.getElementById('events-today');
+            const currentEvents = parseInt(eventsToday.textContent.replace(',', ''));
+            eventsToday.textContent = (currentEvents + Math.floor(Math.random() * 10)).toLocaleString();
+
+            // Update embryo progress
+            const progressBars = document.querySelectorAll('.progress-fill');
+            progressBars.forEach(bar => {
+                const currentWidth = parseInt(bar.style.width);
+                if (currentWidth < 100) {
+                    bar.style.width = Math.min(100, currentWidth + Math.random() * 2) + '%';
+                }
+            });
+
+            // Simulate agent birth
+            if (Math.random() < 0.01) { // 1% chance per update
+                showBirthCelebration();
+            }
+        }
+
+        function showBirthCelebration() {
+            document.getElementById('birth-modal').style.display = 'block';
+
+            // Add confetti effect
+            createConfetti();
+        }
+
+        function closeBirthModal() {
+            document.getElementById('birth-modal').style.display = 'none';
+        }
+
+        function createConfetti() {
+            // Simple confetti animation
+            for (let i = 0; i < 50; i++) {
+                const confetti = document.createElement('div');
+                confetti.style.position = 'fixed';
+                confetti.style.left = Math.random() * 100 + 'vw';
+                confetti.style.top = '-10px';
+                confetti.style.width = '10px';
+                confetti.style.height = '10px';
+                confetti.style.background = ['#667eea', '#764ba2', '#48bb78', '#ed8936'][Math.floor(Math.random() * 4)];
+                confetti.style.zIndex = '9999';
+                confetti.style.animation = 'fall 3s linear forwards';
+                document.body.appendChild(confetti);
+
+                setTimeout(() => confetti.remove(), 3000);
+            }
+        }
+
+        // Add CSS for confetti animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes fall {
+                to {
+                    transform: translateY(100vh) rotate(360deg);
+                }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Initialize pattern chart
+        const ctx = document.getElementById('pattern-chart').getContext('2d');
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Development', 'App State', 'System Maintenance', 'Other'],
+                datasets: [{
+                    data: [45, 32, 23, 5],
+                    backgroundColor: ['#667eea', '#764ba2', '#48bb78', '#ed8936'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+
+        // Neural network visualization
+        function drawNeuralNetwork() {
+            const canvas = document.getElementById('network-canvas');
+            const ctx = canvas.getContext('2d');
+
+            // Set canvas size
+            canvas.width = canvas.offsetWidth;
+            canvas.height = 200;
+
+            const layers = [8, 6, 4, 3, 2]; // Simplified network
+            const layerSpacing = canvas.width / (layers.length + 1);
+            const nodeRadius = 8;
+
+            // Draw connections
+            ctx.strokeStyle = '#e2e8f0';
+            ctx.lineWidth = 1;
+
+            for (let i = 0; i < layers.length - 1; i++) {
+                const currentLayerNodes = layers[i];
+                const nextLayerNodes = layers[i + 1];
+                const currentX = layerSpacing * (i + 1);
+                const nextX = layerSpacing * (i + 2);
+
+                for (let j = 0; j < currentLayerNodes; j++) {
+                    const currentY = (canvas.height / (currentLayerNodes + 1)) * (j + 1);
+
+                    for (let k = 0; k < nextLayerNodes; k++) {
+                        const nextY = (canvas.height / (nextLayerNodes + 1)) * (k + 1);
+
+                        ctx.beginPath();
+                        ctx.moveTo(currentX, currentY);
+                        ctx.lineTo(nextX, nextY);
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            // Draw nodes
+            layers.forEach((nodeCount, layerIndex) => {
+                const x = layerSpacing * (layerIndex + 1);
+
+                for (let i = 0; i < nodeCount; i++) {
+                    const y = (canvas.height / (nodeCount + 1)) * (i + 1);
+
+                    // Node circle
+                    ctx.beginPath();
+                    ctx.arc(x, y, nodeRadius, 0, 2 * Math.PI);
+                    ctx.fillStyle = '#667eea';
+                    ctx.fill();
+
+                    // Activation animation
+                    if (Math.random() < 0.3) {
+                        ctx.beginPath();
+                        ctx.arc(x, y, nodeRadius + 3, 0, 2 * Math.PI);
+                        ctx.strokeStyle = '#764ba2';
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+                    }
+                }
+            });
+        }
+
+        // Initialize neural network visualization
+        drawNeuralNetwork();
+
+        // Update dashboard every 5 seconds
+        setInterval(updateDashboard, 5000);
+
+        // Redraw neural network every 2 seconds for animation
+        setInterval(drawNeuralNetwork, 2000);
+
+        // Resize handler
+        window.addEventListener('resize', drawNeuralNetwork);
+    </script>
+</body>
+
+</html>

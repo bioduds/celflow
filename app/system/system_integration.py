@@ -20,7 +20,7 @@ from pathlib import Path
 
 from ..core.agent_manager import AgentManager
 from ..core.embryo_pool import EmbryoPool
-from .macos_tray import create_tray_app, EnhancedSelFlowTrayApp
+from .macos_tray import create_tray_app, SelFlowTrayApp
 from .event_capture import SystemEventCapture
 from .high_performance_capture import HighPerformanceEventCapture
 from .agent_interface import create_agent_interface, AgentChatInterface
@@ -41,7 +41,7 @@ class SelFlowSystemIntegration:
         self.agent_manager: Optional[AgentManager] = None
 
         # System integration components
-        self.tray_app: Optional[EnhancedSelFlowTrayApp] = None
+        self.tray_app: Optional[SelFlowTrayApp] = None
         self.event_capture: Optional[SystemEventCapture] = None
         self.agent_interface: Optional[AgentChatInterface] = None
 

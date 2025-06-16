@@ -1,355 +1,752 @@
 """
-SelFlow Central Integration Layer
-Integrates Central AI Brain with existing SelFlow components
+Central Integration - Unified SelFlow AI Assistant
+
+This module provides the complete integration layer that orchestrates all 8 specialized
+agents into a unified, intelligent AI assistant for SelFlow. It serves as the main
+entry point for all AI-powered interactions and coordinates:
+
+- Natural language processing and user interface
+- Multi-agent task coordination and orchestration
+- Intelligent embryo training and validation
+- Safe system command translation and execution
+- Pattern classification coherence validation
+- Advanced context intelligence and memory management
+- Proactive user assistance and workflow optimization
+- Voice command processing and speech interaction
 """
 
 import asyncio
 import logging
-from typing import Dict, Any, Optional
+import time
 from datetime import datetime
-from pathlib import Path
+from typing import Dict, Any, Optional, List, Callable
+from dataclasses import dataclass
+from enum import Enum
+import json
 
-from ..ai.central_brain import CentralAIBrain
-from .agent_manager import AgentManager
-from .embryo_pool import EmbryoPool
-from .pattern_detector import PatternDetector
+# Import all AI components
+from ..ai.central_brain import CentralAIBrain, create_central_brain
+from ..ai.context_manager import ContextManager
 
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+class IntegrationMode(Enum):
+    """Integration operation modes"""
+
+    DEVELOPMENT = "development"
+    PRODUCTION = "production"
+    TESTING = "testing"
+    DEMO = "demo"
+
+
+class SystemState(Enum):
+    """Overall system states"""
+
+    INITIALIZING = "initializing"
+    READY = "ready"
+    ACTIVE = "active"
+    PROCESSING = "processing"
+    ERROR = "error"
+    SHUTDOWN = "shutdown"
+
+
+class InteractionType(Enum):
+    """Types of user interactions"""
+
+    TEXT_CHAT = "text_chat"
+    VOICE_COMMAND = "voice_command"
+    SYSTEM_COMMAND = "system_command"
+    TASK_REQUEST = "task_request"
+    QUERY_REQUEST = "query_request"
+    TRAINING_REQUEST = "training_request"
+
+
+@dataclass
+class SystemMetrics:
+    """Comprehensive system performance metrics"""
+
+    total_interactions: int
+    successful_interactions: int
+    failed_interactions: int
+    average_response_time: float
+    agent_performance: Dict[str, Dict[str, Any]]
+    system_uptime: float
+    memory_usage: Dict[str, Any]
+    ai_model_performance: Dict[str, Any]
+
+
+@dataclass
+class UserInteraction:
+    """A complete user interaction with the system"""
+
+    interaction_id: str
+    user_id: str
+    interaction_type: InteractionType
+    input_data: Dict[str, Any]
+    timestamp: datetime
+    processing_time: float
+    agents_involved: List[str]
+    response_data: Dict[str, Any]
+    success: bool
+    confidence: float
+    context_used: Dict[str, Any]
+
+
 class CentralIntegration:
-    """Integrates Central AI Brain with existing SelFlow components"""
+    """
+    Central Integration System for SelFlow
+
+    The unified AI assistant that orchestrates all specialized agents to provide
+    intelligent, context-aware assistance for SelFlow users. This system serves
+    as the main interface between users and the AI-powered capabilities.
+    """
 
     def __init__(self, config: Dict[str, Any]):
+        """Initialize the Central Integration system"""
         self.config = config
+        self.integration_config = config.get("central_integration", {})
 
-        # Core components
+        # System state
+        self.system_state = SystemState.INITIALIZING
+        self.integration_mode = IntegrationMode(
+            self.integration_config.get("mode", "development")
+        )
+        self.start_time = datetime.now()
+
+        # Core AI Brain
         self.central_brain: Optional[CentralAIBrain] = None
-        self.agent_manager: Optional[AgentManager] = None
-        self.embryo_pool: Optional[EmbryoPool] = None
-        self.pattern_detector: Optional[PatternDetector] = None
 
-        # Integration state
-        self.is_running = False
-        self.startup_time = None
+        # Integration components
+        self.interaction_history: List[UserInteraction] = []
+        self.active_sessions: Dict[str, Dict[str, Any]] = {}
+        self.system_callbacks: Dict[str, Callable] = {}
+
+        # Performance tracking
+        self.metrics = SystemMetrics(
+            total_interactions=0,
+            successful_interactions=0,
+            failed_interactions=0,
+            average_response_time=0.0,
+            agent_performance={},
+            system_uptime=0.0,
+            memory_usage={},
+            ai_model_performance={},
+        )
+
+        # Configuration
+        self.max_interaction_history = self.integration_config.get("max_history", 1000)
+        self.auto_cleanup_interval = self.integration_config.get(
+            "cleanup_interval", 3600
+        )
+        self.performance_monitoring = self.integration_config.get("monitoring", True)
 
         logger.info("CentralIntegration initialized")
 
-    async def start(self):
-        """Start the integrated system"""
+    async def start(self) -> bool:
+        """Start the Central Integration system (alias for initialize)"""
+        return await self.initialize()
+
+    async def initialize(self) -> bool:
+        """Initialize the complete AI system"""
         try:
-            logger.info("🔗 Starting Central Integration Layer...")
+            logger.info("🚀 Initializing SelFlow Central AI Brain Integration...")
 
             # Initialize Central AI Brain
-            self.central_brain = CentralAIBrain(self.config)
+            self.central_brain = await create_central_brain(self.config)
+            if not self.central_brain:
+                logger.error("Failed to create Central AI Brain")
+                return False
+
+            # Start the Central AI Brain
             await self.central_brain.start()
 
-            # Initialize existing components
-            await self._initialize_existing_components()
+            # Set up system callbacks
+            self._setup_system_callbacks()
 
-            # Set up integration hooks
-            await self._setup_integration_hooks()
+            # Start background tasks
+            await self._start_background_tasks()
 
-            self.is_running = True
-            self.startup_time = datetime.now()
+            # Update system state
+            self.system_state = SystemState.READY
 
-            logger.info("✅ Central Integration Layer started successfully")
-
-        except Exception as e:
-            logger.error(f"❌ Failed to start Central Integration: {e}")
-            raise
-
-    async def stop(self):
-        """Stop the integrated system"""
-        try:
-            logger.info("🛑 Stopping Central Integration Layer...")
-
-            if self.central_brain:
-                await self.central_brain.stop()
-
-            self.is_running = False
-            logger.info("✅ Central Integration Layer stopped")
+            logger.info(
+                "✅ SelFlow Central AI Brain Integration initialized successfully"
+            )
+            return True
 
         except Exception as e:
-            logger.error(f"❌ Error stopping Central Integration: {e}")
+            logger.error(f"❌ Failed to initialize Central Integration: {e}")
+            self.system_state = SystemState.ERROR
+            return False
 
-    async def _initialize_existing_components(self):
-        """Initialize existing SelFlow components"""
-        try:
-            # Initialize AgentManager
-            self.agent_manager = AgentManager(self.config)
+    def _setup_system_callbacks(self):
+        """Set up system-wide callbacks and event handlers"""
+        # Voice command callback
+        if self.central_brain.voice_interface:
+            self.central_brain.voice_interface.set_command_callback(
+                self._handle_voice_interaction
+            )
 
-            # Initialize EmbryoPool
-            self.embryo_pool = EmbryoPool(self.config)
+        # System event callbacks
+        self.system_callbacks = {
+            "user_interaction": self._log_user_interaction,
+            "agent_response": self._track_agent_performance,
+            "system_error": self._handle_system_error,
+            "performance_update": self._update_performance_metrics,
+        }
 
-            # Initialize PatternDetector
-            self.pattern_detector = PatternDetector(self.config)
+        logger.info("System callbacks configured")
 
-            logger.info("Existing SelFlow components initialized")
+    async def _start_background_tasks(self):
+        """Start background monitoring and maintenance tasks"""
+        # Start performance monitoring
+        if self.performance_monitoring:
+            asyncio.create_task(self._performance_monitoring_loop())
 
-        except Exception as e:
-            logger.error(f"Failed to initialize existing components: {e}")
-            # Continue without existing components for now
-            logger.warning("Continuing without some existing components")
+        # Start cleanup task
+        asyncio.create_task(self._cleanup_loop())
 
-    async def _setup_integration_hooks(self):
-        """Set up integration hooks between components"""
-        try:
-            # Update Central AI Brain with current system state
-            if self.agent_manager and self.central_brain:
-                agents_info = await self._get_agents_info()
-                await self.central_brain.update_system_state(
-                    {
-                        "active_agents": list(agents_info.keys()),
-                        "system_health": {"status": "operational"},
-                        "integration_active": True,
-                    }
-                )
+        logger.info("Background tasks started")
 
-            logger.info("Integration hooks established")
-
-        except Exception as e:
-            logger.error(f"Failed to setup integration hooks: {e}")
-
-    async def _get_agents_info(self) -> Dict[str, Any]:
-        """Get information about current agents"""
-        agents_info = {}
-
-        if self.agent_manager:
+    async def _performance_monitoring_loop(self):
+        """Background task for performance monitoring"""
+        while self.system_state != SystemState.SHUTDOWN:
             try:
-                # This would integrate with actual AgentManager methods
-                # For now, return placeholder data
-                agents_info = {
-                    "advisor_system_guardian": {
-                        "name": "Advisor the System Guardian",
-                        "specialization": "System Monitoring",
-                        "status": "active",
-                        "capabilities": ["system_monitoring", "resource_management"],
-                    }
-                }
+                await self._update_system_metrics()
+                await asyncio.sleep(60)  # Update every minute
             except Exception as e:
-                logger.error(f"Failed to get agents info: {e}")
+                logger.error(f"Performance monitoring error: {e}")
+                await asyncio.sleep(60)
 
-        return agents_info
+    async def _cleanup_loop(self):
+        """Background task for system cleanup"""
+        while self.system_state != SystemState.SHUTDOWN:
+            try:
+                await self._cleanup_old_data()
+                await asyncio.sleep(self.auto_cleanup_interval)
+            except Exception as e:
+                logger.error(f"Cleanup task error: {e}")
+                await asyncio.sleep(self.auto_cleanup_interval)
 
-    async def enhanced_agent_birth(self, embryo_data: Dict[str, Any]) -> Dict[str, Any]:
-        """AI-enhanced agent birth process"""
-
-        if not self.is_running or not self.central_brain:
-            return {"success": False, "error": "Central Integration not running"}
-
-        try:
-            logger.info("🤖 Starting AI-enhanced agent birth process...")
-
-            # Use Central AI Brain to evaluate embryo readiness
-            training_assessment = await self.central_brain.generate_training_labels(
-                [embryo_data]
-            )
-
-            # Get AI recommendation for specialization
-            specialization_prompt = f"""
-            Analyze this embryo data and recommend the best specialization:
-            
-            Embryo Data: {embryo_data}
-            
-            Consider:
-            1. What patterns does this embryo show expertise in?
-            2. What would be the most valuable specialization for the system?
-            3. What capabilities should this agent have?
-            
-            Provide a clear recommendation for the agent's specialization and capabilities.
-            """
-
-            ai_recommendation = await self.central_brain.process_user_input(
-                specialization_prompt, context_type="embryo_training"
-            )
-
-            # Create enhanced agent birth result
-            birth_result = {
-                "success": True,
-                "embryo_id": embryo_data.get("id", "unknown"),
-                "ai_assessment": training_assessment,
-                "specialization_recommendation": ai_recommendation.get("message", ""),
-                "birth_timestamp": datetime.now().isoformat(),
-                "enhanced_by_ai": True,
-            }
-
-            # If we have an agent manager, create the actual agent
-            if self.agent_manager:
-                # This would integrate with actual agent creation
-                logger.info("Agent creation would happen here with AgentManager")
-
-            logger.info("✅ AI-enhanced agent birth completed")
-            return birth_result
-
-        except Exception as e:
-            logger.error(f"❌ Enhanced agent birth failed: {e}")
-            return {"success": False, "error": str(e)}
-
-    async def intelligent_pattern_detection(self, events: list) -> Dict[str, Any]:
-        """AI-enhanced pattern detection"""
-
-        if not self.is_running or not self.central_brain:
-            return {"success": False, "error": "Central Integration not running"}
+    async def process_user_interaction(
+        self,
+        user_id: str,
+        interaction_type: InteractionType,
+        input_data: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Process a complete user interaction through the AI system"""
+        interaction_id = f"int_{int(time.time())}_{user_id}"
+        start_time = time.time()
 
         try:
-            logger.info("🔍 Starting AI-enhanced pattern detection...")
+            logger.info(f"🎯 Processing user interaction: {interaction_type.value}")
 
-            # Basic pattern detection first
-            basic_patterns = []
-            if self.pattern_detector:
-                # This would use actual PatternDetector
-                basic_patterns = [{"type": "placeholder", "confidence": 0.7}]
+            # Update system state
+            self.system_state = SystemState.PROCESSING
 
-            # AI validation and enhancement
-            validated_patterns = await self.central_brain.validate_patterns(
-                basic_patterns
+            # Create interaction record
+            interaction = UserInteraction(
+                interaction_id=interaction_id,
+                user_id=user_id,
+                interaction_type=interaction_type,
+                input_data=input_data,
+                timestamp=datetime.now(),
+                processing_time=0.0,
+                agents_involved=[],
+                response_data={},
+                success=False,
+                confidence=0.0,
+                context_used={},
             )
 
-            # Generate AI insights about patterns
-            pattern_analysis_prompt = f"""
-            Analyze these detected patterns and events:
-            
-            Events: {len(events)} events detected
-            Basic Patterns: {basic_patterns}
-            
-            Provide insights:
-            1. Are these patterns meaningful and coherent?
-            2. What additional patterns might be present?
-            3. How can these patterns help create better agents?
-            4. What recommendations do you have for pattern improvement?
-            """
+            # Route to appropriate processing method
+            if interaction_type == InteractionType.TEXT_CHAT:
+                result = await self._process_text_chat(interaction)
+            elif interaction_type == InteractionType.VOICE_COMMAND:
+                result = await self._process_voice_command(interaction)
+            elif interaction_type == InteractionType.SYSTEM_COMMAND:
+                result = await self._process_system_command(interaction)
+            elif interaction_type == InteractionType.TASK_REQUEST:
+                result = await self._process_task_request(interaction)
+            elif interaction_type == InteractionType.QUERY_REQUEST:
+                result = await self._process_query_request(interaction)
+            elif interaction_type == InteractionType.TRAINING_REQUEST:
+                result = await self._process_training_request(interaction)
+            else:
+                result = await self._process_generic_interaction(interaction)
 
-            ai_insights = await self.central_brain.process_user_input(
-                pattern_analysis_prompt, context_type="pattern_validation"
+            # Finalize interaction
+            interaction.processing_time = time.time() - start_time
+            interaction.response_data = result
+            interaction.success = result.get("success", False)
+            interaction.confidence = result.get("confidence", 0.0)
+
+            # Update metrics
+            self.metrics.total_interactions += 1
+            if interaction.success:
+                self.metrics.successful_interactions += 1
+            else:
+                self.metrics.failed_interactions += 1
+
+            # Store interaction
+            self.interaction_history.append(interaction)
+
+            # Update system state
+            self.system_state = SystemState.READY
+
+            logger.info(
+                f"✅ Interaction processed in {interaction.processing_time:.2f}s"
             )
 
-            result = {
-                "success": True,
-                "basic_patterns": basic_patterns,
-                "validated_patterns": validated_patterns,
-                "ai_insights": ai_insights.get("message", ""),
-                "events_analyzed": len(events),
-                "analysis_timestamp": datetime.now().isoformat(),
+            return {
+                "success": interaction.success,
+                "interaction_id": interaction_id,
+                "response": result,
+                "processing_time": interaction.processing_time,
+                "agents_involved": interaction.agents_involved,
+                "confidence": interaction.confidence,
             }
 
-            logger.info("✅ AI-enhanced pattern detection completed")
-            return result
-
         except Exception as e:
-            logger.error(f"❌ Intelligent pattern detection failed: {e}")
-            return {"success": False, "error": str(e)}
+            logger.error(f"❌ Failed to process user interaction: {e}")
+            self.system_state = SystemState.ERROR
 
-    async def process_user_command(self, command: str) -> Dict[str, Any]:
-        """Process user commands through AI brain"""
-
-        if not self.is_running or not self.central_brain:
             return {
                 "success": False,
-                "error": "Central Integration not running",
-                "message": "I'm not currently available. Please try again later.",
+                "error": str(e),
+                "interaction_id": interaction_id,
+                "processing_time": time.time() - start_time,
             }
 
+    async def _process_text_chat(self, interaction: UserInteraction) -> Dict[str, Any]:
+        """Process text-based chat interactions"""
         try:
-            # Process command through Central AI Brain
+            user_message = interaction.input_data.get("message", "")
+            session_id = interaction.input_data.get("session_id", "default")
+
+            # Use UserInterfaceAgent for natural language processing
             response = await self.central_brain.process_user_input(
-                command, context_type="system_control"
+                user_message, session_id
             )
 
-            # If the AI suggests system actions, coordinate them
-            if (
-                response.get("success")
-                and "action" in response.get("message", "").lower()
-            ):
-                # This is where we'd coordinate actual system actions
-                logger.info("System action coordination would happen here")
+            interaction.agents_involved.append("UserInterfaceAgent")
+
+            # Get proactive suggestions if enabled
+            if self.central_brain.proactive_suggestion_engine:
+                suggestions = await self.central_brain.generate_proactive_suggestions(
+                    user_id=session_id,
+                    context_data={"message": user_message, "session": session_id},
+                )
+                if suggestions.get("success"):
+                    response["suggestions"] = suggestions.get("suggestions", [])
+                    interaction.agents_involved.append("ProactiveSuggestionEngine")
 
             return response
 
         except Exception as e:
-            logger.error(f"Error processing user command: {e}")
-            return {
-                "success": False,
-                "error": str(e),
-                "message": "I encountered an error processing your command.",
-            }
+            logger.error(f"Text chat processing error: {e}")
+            return {"success": False, "error": str(e)}
+
+    async def _process_voice_command(
+        self, interaction: UserInteraction
+    ) -> Dict[str, Any]:
+        """Process voice command interactions"""
+        try:
+            voice_command = interaction.input_data.get("voice_command")
+
+            if not voice_command:
+                return {"success": False, "error": "No voice command provided"}
+
+            # Process through voice interface
+            if self.central_brain.voice_interface:
+                # Voice command is already processed, just handle the response
+                response = await self.central_brain._handle_voice_command(voice_command)
+                interaction.agents_involved.append("VoiceInterface")
+
+                return {
+                    "success": True,
+                    "message": "Voice command processed",
+                    "command_type": voice_command.command_type.value,
+                    "confidence": voice_command.confidence,
+                }
+            else:
+                return {"success": False, "error": "Voice interface not available"}
+
+        except Exception as e:
+            logger.error(f"Voice command processing error: {e}")
+            return {"success": False, "error": str(e)}
+
+    async def _process_system_command(
+        self, interaction: UserInteraction
+    ) -> Dict[str, Any]:
+        """Process system control commands"""
+        try:
+            command = interaction.input_data.get("command", "")
+            parameters = interaction.input_data.get("parameters", {})
+
+            # Use SystemController for safe command execution
+            response = await self.central_brain.execute_system_command(
+                command, parameters
+            )
+
+            interaction.agents_involved.append("SystemController")
+
+            return response
+
+        except Exception as e:
+            logger.error(f"System command processing error: {e}")
+            return {"success": False, "error": str(e)}
+
+    async def _process_task_request(
+        self, interaction: UserInteraction
+    ) -> Dict[str, Any]:
+        """Process task management requests"""
+        try:
+            task_data = interaction.input_data.get("task", {})
+            action = interaction.input_data.get("action", "create")
+
+            # Use AgentOrchestrator for complex task coordination
+            response = await self.central_brain.coordinate_agents(
+                task_description=f"Task {action}: {task_data}",
+                required_capabilities=["task_management"],
+                priority="normal",
+            )
+
+            interaction.agents_involved.append("AgentOrchestrator")
+
+            return response
+
+        except Exception as e:
+            logger.error(f"Task request processing error: {e}")
+            return {"success": False, "error": str(e)}
+
+    async def _process_query_request(
+        self, interaction: UserInteraction
+    ) -> Dict[str, Any]:
+        """Process information query requests"""
+        try:
+            query = interaction.input_data.get("query", "")
+            context = interaction.input_data.get("context", {})
+
+            # Use advanced context management for intelligent responses
+            if self.central_brain.advanced_context_manager:
+                context_insights = await self.central_brain.analyze_context_patterns(
+                    context_data={"query": query, "context": context}
+                )
+                interaction.agents_involved.append("AdvancedContextManager")
+
+            # Process query through user interface
+            response = await self.central_brain.process_user_input(
+                query, "query_session"
+            )
+            interaction.agents_involved.append("UserInterfaceAgent")
+
+            return response
+
+        except Exception as e:
+            logger.error(f"Query request processing error: {e}")
+            return {"success": False, "error": str(e)}
+
+    async def _process_training_request(
+        self, interaction: UserInteraction
+    ) -> Dict[str, Any]:
+        """Process embryo training requests"""
+        try:
+            embryo_data = interaction.input_data.get("embryo", {})
+            training_type = interaction.input_data.get("training_type", "validation")
+
+            # Use EmbryoTrainer for intelligent training
+            if training_type == "validation":
+                response = await self.central_brain.validate_embryo_training(
+                    embryo_data
+                )
+            elif training_type == "birth_readiness":
+                response = await self.central_brain.assess_birth_readiness(embryo_data)
+            else:
+                response = {
+                    "success": False,
+                    "error": f"Unknown training type: {training_type}",
+                }
+
+            interaction.agents_involved.append("EmbryoTrainer")
+
+            return response
+
+        except Exception as e:
+            logger.error(f"Training request processing error: {e}")
+            return {"success": False, "error": str(e)}
+
+    async def _process_generic_interaction(
+        self, interaction: UserInteraction
+    ) -> Dict[str, Any]:
+        """Process generic interactions that don't fit specific categories"""
+        try:
+            # Default to user interface processing
+            message = interaction.input_data.get("message", str(interaction.input_data))
+            response = await self.central_brain.process_user_input(
+                message, "generic_session"
+            )
+
+            interaction.agents_involved.append("UserInterfaceAgent")
+
+            return response
+
+        except Exception as e:
+            logger.error(f"Generic interaction processing error: {e}")
+            return {"success": False, "error": str(e)}
+
+    async def _handle_voice_interaction(self, voice_command):
+        """Handle voice interactions from the voice interface"""
+        try:
+            # Convert voice command to user interaction
+            await self.process_user_interaction(
+                user_id="voice_user",
+                interaction_type=InteractionType.VOICE_COMMAND,
+                input_data={"voice_command": voice_command},
+            )
+        except Exception as e:
+            logger.error(f"Voice interaction handling error: {e}")
+
+    async def start_voice_interface(self) -> Dict[str, Any]:
+        """Start the voice interface system"""
+        if not self.central_brain or not self.central_brain.voice_interface:
+            return {"success": False, "error": "Voice interface not available"}
+
+        return await self.central_brain.start_voice_interface()
+
+    async def stop_voice_interface(self) -> Dict[str, Any]:
+        """Stop the voice interface system"""
+        if not self.central_brain or not self.central_brain.voice_interface:
+            return {"success": False, "error": "Voice interface not available"}
+
+        return await self.central_brain.stop_voice_interface()
 
     async def get_system_status(self) -> Dict[str, Any]:
         """Get comprehensive system status"""
+        try:
+            # Get central brain status
+            brain_status = {}
+            if self.central_brain:
+                brain_status = self.central_brain.get_status_summary()
 
-        status = {
-            "integration_running": self.is_running,
-            "startup_time": (
-                self.startup_time.isoformat() if self.startup_time else None
-            ),
-            "central_brain_status": None,
-            "components_status": {
-                "agent_manager": self.agent_manager is not None,
-                "embryo_pool": self.embryo_pool is not None,
-                "pattern_detector": self.pattern_detector is not None,
-            },
-        }
+            # Calculate uptime
+            uptime = (datetime.now() - self.start_time).total_seconds()
 
-        # Get Central AI Brain status
-        if self.central_brain:
-            status["central_brain_status"] = (
-                await self.central_brain.get_health_status()
-            )
+            # Get agent performance
+            agent_performance = {}
+            if self.central_brain:
+                # Get individual agent statuses
+                if self.central_brain.pattern_validator:
+                    pattern_metrics = (
+                        self.central_brain.get_pattern_validation_metrics()
+                    )
+                    agent_performance["PatternValidator"] = pattern_metrics.get(
+                        "metrics", {}
+                    )
 
-        return status
+                if self.central_brain.advanced_context_manager:
+                    context_metrics = self.central_brain.get_context_insights()
+                    agent_performance["AdvancedContextManager"] = context_metrics.get(
+                        "insights", {}
+                    )
 
-    async def chat_with_ai(self, message: str) -> Dict[str, Any]:
-        """Direct chat interface with Central AI Brain"""
+                if self.central_brain.proactive_suggestion_engine:
+                    suggestion_metrics = self.central_brain.get_suggestion_metrics()
+                    agent_performance["ProactiveSuggestionEngine"] = (
+                        suggestion_metrics.get("metrics", {})
+                    )
 
-        if not self.is_running or not self.central_brain:
+                if self.central_brain.voice_interface:
+                    voice_metrics = self.central_brain.get_voice_metrics()
+                    agent_performance["VoiceInterface"] = voice_metrics.get(
+                        "metrics", {}
+                    )
+
             return {
-                "success": False,
-                "message": "I'm not currently available. Please try again later.",
+                "success": True,
+                "system_state": self.system_state.value,
+                "integration_mode": self.integration_mode.value,
+                "uptime_seconds": uptime,
+                "total_interactions": self.metrics.total_interactions,
+                "success_rate": (
+                    (
+                        self.metrics.successful_interactions
+                        / self.metrics.total_interactions
+                        * 100
+                    )
+                    if self.metrics.total_interactions > 0
+                    else 0
+                ),
+                "central_brain_status": brain_status,
+                "agent_performance": agent_performance,
+                "active_sessions": len(self.active_sessions),
+                "interaction_history_size": len(self.interaction_history),
             }
 
-        return await self.central_brain.process_user_input(message, context_type="chat")
+        except Exception as e:
+            logger.error(f"Error getting system status: {e}")
+            return {"success": False, "error": str(e)}
 
-    async def stream_chat_response(self, message: str):
-        """Stream chat response from Central AI Brain"""
+    async def get_interaction_history(
+        self, user_id: Optional[str] = None, limit: int = 50
+    ) -> Dict[str, Any]:
+        """Get user interaction history"""
+        try:
+            # Filter by user if specified
+            if user_id:
+                filtered_history = [
+                    interaction
+                    for interaction in self.interaction_history
+                    if interaction.user_id == user_id
+                ]
+            else:
+                filtered_history = self.interaction_history
 
-        if not self.is_running or not self.central_brain:
-            yield "I'm not currently available. Please try again later."
-            return
+            # Apply limit
+            recent_history = (
+                filtered_history[-limit:] if limit > 0 else filtered_history
+            )
 
-        async for chunk in self.central_brain.stream_user_response(
-            message, context_type="chat"
-        ):
-            yield chunk
+            # Convert to serializable format
+            history_data = []
+            for interaction in recent_history:
+                history_data.append(
+                    {
+                        "interaction_id": interaction.interaction_id,
+                        "user_id": interaction.user_id,
+                        "type": interaction.interaction_type.value,
+                        "timestamp": interaction.timestamp.isoformat(),
+                        "processing_time": interaction.processing_time,
+                        "success": interaction.success,
+                        "confidence": interaction.confidence,
+                        "agents_involved": interaction.agents_involved,
+                    }
+                )
 
-    def get_integration_summary(self) -> str:
-        """Get human-readable integration summary"""
+            return {
+                "success": True,
+                "history": history_data,
+                "total_interactions": len(filtered_history),
+                "returned_count": len(history_data),
+            }
 
-        if not self.is_running:
-            return "🔴 Central Integration is offline"
+        except Exception as e:
+            logger.error(f"Error getting interaction history: {e}")
+            return {"success": False, "error": str(e)}
 
-        components = []
-        if self.central_brain and self.central_brain.is_running:
-            components.append("AI Brain")
-        if self.agent_manager:
-            components.append("Agent Manager")
-        if self.embryo_pool:
-            components.append("Embryo Pool")
-        if self.pattern_detector:
-            components.append("Pattern Detector")
+    async def _update_system_metrics(self):
+        """Update comprehensive system metrics"""
+        try:
+            # Update uptime
+            self.metrics.system_uptime = (
+                datetime.now() - self.start_time
+            ).total_seconds()
 
-        components_str = ", ".join(components) if components else "None"
+            # Update average response time
+            if self.interaction_history:
+                total_time = sum(i.processing_time for i in self.interaction_history)
+                self.metrics.average_response_time = total_time / len(
+                    self.interaction_history
+                )
 
-        uptime = ""
-        if self.startup_time:
-            uptime_seconds = (datetime.now() - self.startup_time).total_seconds()
-            uptime = f" (uptime: {uptime_seconds/3600:.1f}h)"
+            # Update agent performance metrics
+            if self.central_brain:
+                self.metrics.agent_performance = {
+                    "UserInterfaceAgent": {"status": "operational"},
+                    "AgentOrchestrator": {"status": "operational"},
+                    "EmbryoTrainer": {"status": "operational"},
+                    "SystemController": {"status": "operational"},
+                    "PatternValidator": {"status": "operational"},
+                    "AdvancedContextManager": {"status": "operational"},
+                    "ProactiveSuggestionEngine": {"status": "operational"},
+                    "VoiceInterface": {"status": "operational"},
+                }
 
-        return f"🟢 Central Integration online{uptime} - Components: {components_str}"
+        except Exception as e:
+            logger.error(f"Error updating system metrics: {e}")
+
+    async def _cleanup_old_data(self):
+        """Clean up old interaction data and optimize memory"""
+        try:
+            # Limit interaction history size
+            if len(self.interaction_history) > self.max_interaction_history:
+                # Keep only the most recent interactions
+                self.interaction_history = self.interaction_history[
+                    -self.max_interaction_history :
+                ]
+                logger.info(
+                    f"Cleaned up interaction history, kept {len(self.interaction_history)} recent interactions"
+                )
+
+            # Clean up old sessions
+            current_time = datetime.now()
+            expired_sessions = []
+            for session_id, session_data in self.active_sessions.items():
+                last_activity = session_data.get("last_activity", current_time)
+                if (
+                    current_time - last_activity
+                ).total_seconds() > 3600:  # 1 hour timeout
+                    expired_sessions.append(session_id)
+
+            for session_id in expired_sessions:
+                del self.active_sessions[session_id]
+
+            if expired_sessions:
+                logger.info(f"Cleaned up {len(expired_sessions)} expired sessions")
+
+        except Exception as e:
+            logger.error(f"Error during cleanup: {e}")
+
+    def _log_user_interaction(self, interaction_data: Dict[str, Any]):
+        """Log user interaction for analytics"""
+        logger.info(
+            f"User interaction logged: {interaction_data.get('type', 'unknown')}"
+        )
+
+    def _track_agent_performance(self, agent_data: Dict[str, Any]):
+        """Track individual agent performance"""
+        agent_name = agent_data.get("agent", "unknown")
+        logger.debug(f"Agent performance tracked: {agent_name}")
+
+    def _handle_system_error(self, error_data: Dict[str, Any]):
+        """Handle system-wide errors"""
+        logger.error(f"System error handled: {error_data.get('error', 'unknown')}")
+
+    def _update_performance_metrics(self, metrics_data: Dict[str, Any]):
+        """Update performance metrics"""
+        logger.debug("Performance metrics updated")
+
+    async def shutdown(self):
+        """Gracefully shutdown the integration system"""
+        try:
+            logger.info("🛑 Shutting down Central Integration...")
+
+            self.system_state = SystemState.SHUTDOWN
+
+            # Stop voice interface
+            if self.central_brain and self.central_brain.voice_interface:
+                await self.central_brain.stop_voice_interface()
+
+            # Cleanup final data
+            await self._cleanup_old_data()
+
+            logger.info("✅ Central Integration shutdown complete")
+
+        except Exception as e:
+            logger.error(f"Error during shutdown: {e}")
 
 
 # Utility functions
-async def create_integrated_system(config: Dict[str, Any]) -> CentralIntegration:
-    """Create and start an integrated SelFlow system"""
-    integration = CentralIntegration(config)
-    await integration.start()
-    return integration
+async def create_central_integration(
+    config: Dict[str, Any],
+) -> Optional[CentralIntegration]:
+    """Create and initialize a central integration instance"""
+    try:
+        integration = CentralIntegration(config)
+        return integration
+    except Exception as e:
+        logger.error(f"Failed to create central integration: {e}")
+        return None

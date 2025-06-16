@@ -3,17 +3,29 @@ SelFlow Central AI Brain - Core Orchestrating Intelligence
 The main brain that coordinates all AI capabilities and system interactions
 """
 
-import asyncio
 import logging
 from typing import Dict, Any, Optional
 from datetime import datetime
 
 from .ollama_client import OllamaClient
 from .context_manager import ContextManager
+from .advanced_context_manager import AdvancedContextManager
 from .user_interface_agent import UserInterfaceAgent
 from .agent_orchestrator import AgentOrchestrator
 from .embryo_trainer import EmbryoTrainer
 from .system_controller import SystemController
+from .pattern_validator import PatternValidator
+from .proactive_suggestion_engine import ProactiveSuggestionEngine
+
+# Import voice interface
+try:
+    from ..system.voice_interface import VoiceInterface, create_voice_interface
+
+    VOICE_AVAILABLE = True
+except ImportError:
+    VOICE_AVAILABLE = False
+    VoiceInterface = None
+    create_voice_interface = None
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +41,7 @@ class CentralAIBrain:
         # Core components
         self.ollama_client = None
         self.context_manager = None
+        self.advanced_context_manager = None
 
         # Specialized agents (will be initialized later)
         self.user_interface = None
@@ -36,6 +49,8 @@ class CentralAIBrain:
         self.embryo_trainer = None
         self.system_controller = None
         self.pattern_validator = None
+        self.proactive_suggestion_engine = None
+        self.voice_interface = None
 
         # State management
         self.is_running = False
@@ -54,6 +69,11 @@ class CentralAIBrain:
             await self.ollama_client.start()
 
             self.context_manager = ContextManager(self.context_config)
+
+            # Initialize Advanced Context Manager
+            self.advanced_context_manager = AdvancedContextManager(
+                self.ollama_client, self.context_manager
+            )
 
             # Validate that everything is working
             health_status = await self.get_health_status()
@@ -104,6 +124,30 @@ class CentralAIBrain:
             # Initialize System Controller
             self.system_controller = SystemController(self)
             logger.info("✅ SystemController initialized")
+
+            # Initialize Pattern Validator
+            self.pattern_validator = PatternValidator(self.ollama_client)
+            logger.info("✅ PatternValidator initialized")
+
+            # Initialize Proactive Suggestion Engine
+            self.proactive_suggestion_engine = ProactiveSuggestionEngine(
+                self.ollama_client, self.advanced_context_manager
+            )
+            logger.info("✅ ProactiveSuggestionEngine initialized")
+
+            # Initialize Voice Interface
+            if VOICE_AVAILABLE:
+                self.voice_interface = create_voice_interface(self.config)
+                if self.voice_interface:
+                    # Set up voice command callback
+                    self.voice_interface.set_command_callback(
+                        self._handle_voice_command
+                    )
+                    logger.info("✅ VoiceInterface initialized")
+                else:
+                    logger.warning("⚠️ VoiceInterface creation failed")
+            else:
+                logger.warning("⚠️ Voice interface not available (missing dependencies)")
 
             # Other agents will be initialized in subsequent phases
             logger.info("Specialized agents initialization completed")
@@ -397,14 +441,62 @@ Your core capabilities:
             )
 
     async def validate_patterns(self, patterns: list) -> Dict[str, Any]:
-        """Validate patterns using AI intelligence (placeholder)"""
+        """Validate pattern classifications for coherence"""
+        if not self.pattern_validator:
+            return {
+                "success": False,
+                "error": "PatternValidator not available",
+                "patterns_validated": 0,
+            }
 
-        # This will be implemented with the PatternValidator agent
-        return {
-            "validated_patterns": patterns,
-            "validation_score": 0.85,
-            "recommendations": ["Pattern validation placeholder"],
-        }
+        try:
+            # Convert patterns to PatternClassification objects if needed
+            from .pattern_validator import PatternClassification
+
+            pattern_objects = []
+
+            for pattern in patterns:
+                if isinstance(pattern, dict):
+                    pattern_obj = PatternClassification(
+                        pattern_id=pattern.get("id", f"pattern_{len(pattern_objects)}"),
+                        category=pattern.get("category", "UNKNOWN"),
+                        subcategory=pattern.get("subcategory", "unknown"),
+                        confidence=pattern.get("confidence", 0.5),
+                        source_agent=pattern.get("source_agent", "system"),
+                        timestamp=datetime.now(),
+                        metadata=pattern.get("metadata", {}),
+                    )
+                    pattern_objects.append(pattern_obj)
+                else:
+                    pattern_objects.append(pattern)
+
+            # Perform system audit if multiple patterns
+            if len(pattern_objects) > 1:
+                result = await self.pattern_validator.system_audit()
+            else:
+                # Validate single pattern
+                result = await self.pattern_validator.validate_single_pattern(
+                    pattern_objects[0]
+                )
+                result = {
+                    "success": True,
+                    "validation_result": result,
+                    "patterns_validated": 1,
+                }
+
+            return {
+                "success": True,
+                "validation_result": result,
+                "patterns_validated": len(pattern_objects),
+            }
+
+        except Exception as e:
+            logger.error(f"Error validating patterns: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "patterns_validated": 0,
+            }
 
     async def generate_training_labels(self, events: list) -> Dict[str, Any]:
         """Generate intelligent training labels for events"""
@@ -593,6 +685,407 @@ Your core capabilities:
                 "error": str(e),
                 "message": "I encountered an error processing your command.",
             }
+
+    async def analyze_user_patterns(
+        self, user_id: str = "default_user"
+    ) -> Dict[str, Any]:
+        """Analyze user interaction patterns using Advanced Context Manager"""
+        if not self.advanced_context_manager:
+            return {
+                "success": False,
+                "error": "Advanced Context Manager not available",
+                "patterns": [],
+                "insights": [],
+                "recommendations": [],
+            }
+
+        try:
+            analysis_result = (
+                await self.advanced_context_manager.analyze_interaction_patterns(
+                    user_id
+                )
+            )
+            return {"success": True, **analysis_result}
+        except Exception as e:
+            logger.error(f"Error analyzing user patterns: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "patterns": [],
+                "insights": [],
+                "recommendations": [],
+            }
+
+    async def generate_context_insights(
+        self, interaction_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Generate AI-powered context insights"""
+        if not self.advanced_context_manager:
+            return {
+                "success": False,
+                "error": "Advanced Context Manager not available",
+                "insights": [],
+            }
+
+        try:
+            insights = await self.advanced_context_manager.generate_context_insights(
+                interaction_data
+            )
+            return {
+                "success": True,
+                "insights": [
+                    {
+                        "id": insight.insight_id,
+                        "type": insight.insight_type,
+                        "description": insight.description,
+                        "confidence": insight.confidence,
+                        "suggestions": insight.actionable_suggestions,
+                        "created_at": insight.created_at.isoformat(),
+                    }
+                    for insight in insights
+                ],
+            }
+        except Exception as e:
+            logger.error(f"Error generating context insights: {e}")
+            return {"success": False, "error": str(e), "insights": []}
+
+    async def optimize_context_memory(self) -> Dict[str, Any]:
+        """Optimize context memory using AI-driven analysis"""
+        if not self.advanced_context_manager:
+            return {"success": False, "error": "Advanced Context Manager not available"}
+
+        try:
+            optimization_result = (
+                await self.advanced_context_manager.optimize_context_memory()
+            )
+            return {"success": True, **optimization_result}
+        except Exception as e:
+            logger.error(f"Error optimizing context memory: {e}")
+            return {"success": False, "error": str(e)}
+
+    def get_advanced_context_metrics(self) -> Dict[str, Any]:
+        """Get advanced context management metrics"""
+        if not self.advanced_context_manager:
+            return {
+                "success": False,
+                "error": "Advanced Context Manager not available",
+                "metrics": {},
+            }
+
+        try:
+            metrics = self.advanced_context_manager.get_advanced_metrics()
+            return {"success": True, "metrics": metrics}
+        except Exception as e:
+            logger.error(f"Error getting advanced context metrics: {e}")
+            return {"success": False, "error": str(e), "metrics": {}}
+
+    async def generate_proactive_suggestions(
+        self, user_id: str, context_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Generate proactive suggestions for the user"""
+        if not self.proactive_suggestion_engine:
+            return {
+                "success": False,
+                "error": "Proactive Suggestion Engine not available",
+                "suggestions": [],
+            }
+
+        try:
+            from .proactive_suggestion_engine import SuggestionContext
+
+            # Build suggestion context
+            suggestion_context = SuggestionContext(
+                user_id=user_id,
+                current_activity=context_data.get("current_activity", "unknown"),
+                time_of_day=context_data.get("time_of_day", "unknown"),
+                day_of_week=context_data.get("day_of_week", "unknown"),
+                recent_patterns=context_data.get("recent_patterns", []),
+                productivity_metrics=context_data.get("productivity_metrics", {}),
+                user_preferences=context_data.get("user_preferences", {}),
+                available_time=context_data.get("available_time", 30),
+                energy_level=context_data.get("energy_level", "medium"),
+                focus_areas=context_data.get("focus_areas", []),
+            )
+
+            suggestions = await self.proactive_suggestion_engine.generate_suggestions(
+                suggestion_context
+            )
+
+            return {
+                "success": True,
+                "suggestions": [
+                    {
+                        "id": s.suggestion_id,
+                        "type": s.suggestion_type.value,
+                        "priority": s.priority.value,
+                        "timing": s.timing.value,
+                        "title": s.title,
+                        "description": s.description,
+                        "rationale": s.rationale,
+                        "actionable_steps": s.actionable_steps,
+                        "expected_benefit": s.expected_benefit,
+                        "confidence_score": s.confidence_score,
+                        "created_at": s.created_at.isoformat(),
+                        "expires_at": s.expires_at.isoformat(),
+                        "status": s.status.value,
+                    }
+                    for s in suggestions
+                ],
+                "total_suggestions": len(suggestions),
+            }
+
+        except Exception as e:
+            logger.error(f"Error generating proactive suggestions: {e}")
+            return {"success": False, "error": str(e), "suggestions": []}
+
+    async def get_immediate_suggestions(
+        self, user_id: str, max_count: int = 3
+    ) -> Dict[str, Any]:
+        """Get immediate suggestions for the user"""
+        if not self.proactive_suggestion_engine:
+            return {
+                "success": False,
+                "error": "Proactive Suggestion Engine not available",
+                "suggestions": [],
+            }
+
+        try:
+            suggestions = (
+                await self.proactive_suggestion_engine.get_immediate_suggestions(
+                    user_id, max_count
+                )
+            )
+
+            return {
+                "success": True,
+                "suggestions": [
+                    {
+                        "id": s.suggestion_id,
+                        "type": s.suggestion_type.value,
+                        "priority": s.priority.value,
+                        "title": s.title,
+                        "description": s.description,
+                        "actionable_steps": s.actionable_steps,
+                        "expected_benefit": s.expected_benefit,
+                        "confidence_score": s.confidence_score,
+                    }
+                    for s in suggestions
+                ],
+                "delivered_count": len(suggestions),
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting immediate suggestions: {e}")
+            return {"success": False, "error": str(e), "suggestions": []}
+
+    async def process_suggestion_feedback(
+        self,
+        suggestion_id: str,
+        user_id: str,
+        feedback_type: str,
+        feedback_text: str = None,
+        effectiveness_rating: int = None,
+    ) -> Dict[str, Any]:
+        """Process user feedback on suggestions"""
+        if not self.proactive_suggestion_engine:
+            return {
+                "success": False,
+                "error": "Proactive Suggestion Engine not available",
+            }
+
+        try:
+            from .proactive_suggestion_engine import SuggestionFeedback
+
+            feedback = SuggestionFeedback(
+                suggestion_id=suggestion_id,
+                user_id=user_id,
+                feedback_type=feedback_type,
+                feedback_text=feedback_text,
+                effectiveness_rating=effectiveness_rating,
+                timestamp=datetime.now(),
+            )
+
+            result = await self.proactive_suggestion_engine.process_user_feedback(
+                feedback
+            )
+            return result
+
+        except Exception as e:
+            logger.error(f"Error processing suggestion feedback: {e}")
+            return {"success": False, "error": str(e)}
+
+    def get_suggestion_metrics(self) -> Dict[str, Any]:
+        """Get proactive suggestion system metrics"""
+        if not self.proactive_suggestion_engine:
+            return {
+                "success": False,
+                "error": "Proactive Suggestion Engine not available",
+                "metrics": {},
+            }
+
+        try:
+            metrics = self.proactive_suggestion_engine.get_suggestion_metrics()
+            return {"success": True, "metrics": metrics}
+
+        except Exception as e:
+            logger.error(f"Error getting suggestion metrics: {e}")
+            return {"success": False, "error": str(e), "metrics": {}}
+
+    async def _handle_voice_command(self, voice_command):
+        """Handle voice commands from the voice interface"""
+        try:
+            from ..system.voice_interface import VoiceCommandType
+
+            logger.info(f"Processing voice command: {voice_command.processed_text}")
+
+            if voice_command.command_type == VoiceCommandType.SYSTEM_CONTROL:
+                # Handle system control commands
+                action = voice_command.parameters.get("action", "status")
+                if action == "status":
+                    status = self.get_status_summary()
+                    await self.voice_interface.speak(f"System status: {status}")
+                elif action == "start":
+                    await self.voice_interface.speak("Starting system components")
+                elif action == "stop":
+                    await self.voice_interface.speak("Stopping system components")
+                else:
+                    await self.voice_interface.speak("System command processed")
+
+            elif voice_command.command_type == VoiceCommandType.CHAT_MESSAGE:
+                # Process as regular chat message
+                response = await self.process_user_input(
+                    voice_command.processed_text, "voice_chat"
+                )
+                if response.get("success"):
+                    await self.voice_interface.speak(
+                        response.get("message", "I'm here to help")
+                    )
+                else:
+                    await self.voice_interface.speak(
+                        "I'm sorry, I couldn't process that request"
+                    )
+
+            elif voice_command.command_type == VoiceCommandType.TASK_MANAGEMENT:
+                # Handle task management
+                action = voice_command.parameters.get("action", "list")
+                if action == "list":
+                    await self.voice_interface.speak("Here are your current tasks")
+                elif action == "create":
+                    await self.voice_interface.speak("I'll help you create a new task")
+                else:
+                    await self.voice_interface.speak("Task command processed")
+
+            elif voice_command.command_type == VoiceCommandType.QUERY_REQUEST:
+                # Handle query requests
+                query = voice_command.parameters.get("query", "")
+                if query:
+                    await self.voice_interface.speak(
+                        f"Searching for information about {query}"
+                    )
+                else:
+                    await self.voice_interface.speak(
+                        "What would you like me to search for?"
+                    )
+
+            else:
+                # Default response
+                await self.voice_interface.speak(
+                    "I heard your command and I'm processing it"
+                )
+
+        except Exception as e:
+            logger.error(f"Error handling voice command: {e}")
+            if self.voice_interface:
+                await self.voice_interface.speak(
+                    "I encountered an error processing your command"
+                )
+
+    async def start_voice_interface(self) -> Dict[str, Any]:
+        """Start the voice interface system"""
+        if not self.voice_interface:
+            return {"success": False, "error": "Voice interface not available"}
+
+        try:
+            success = await self.voice_interface.start()
+            return {
+                "success": success,
+                "message": (
+                    "Voice interface started"
+                    if success
+                    else "Failed to start voice interface"
+                ),
+            }
+        except Exception as e:
+            logger.error(f"Error starting voice interface: {e}")
+            return {"success": False, "error": str(e)}
+
+    async def stop_voice_interface(self) -> Dict[str, Any]:
+        """Stop the voice interface system"""
+        if not self.voice_interface:
+            return {"success": False, "error": "Voice interface not available"}
+
+        try:
+            await self.voice_interface.stop()
+            return {"success": True, "message": "Voice interface stopped"}
+        except Exception as e:
+            logger.error(f"Error stopping voice interface: {e}")
+            return {"success": False, "error": str(e)}
+
+    async def start_voice_listening(self) -> Dict[str, Any]:
+        """Start voice listening"""
+        if not self.voice_interface:
+            return {"success": False, "error": "Voice interface not available"}
+
+        try:
+            await self.voice_interface.start_listening()
+            return {"success": True, "message": "Voice listening started"}
+        except Exception as e:
+            logger.error(f"Error starting voice listening: {e}")
+            return {"success": False, "error": str(e)}
+
+    async def stop_voice_listening(self) -> Dict[str, Any]:
+        """Stop voice listening"""
+        if not self.voice_interface:
+            return {"success": False, "error": "Voice interface not available"}
+
+        try:
+            await self.voice_interface.stop_listening()
+            return {"success": True, "message": "Voice listening stopped"}
+        except Exception as e:
+            logger.error(f"Error stopping voice listening: {e}")
+            return {"success": False, "error": str(e)}
+
+    def get_voice_metrics(self) -> Dict[str, Any]:
+        """Get voice interface metrics"""
+        if not self.voice_interface:
+            return {
+                "success": False,
+                "error": "Voice interface not available",
+                "metrics": {},
+            }
+
+        try:
+            metrics = self.voice_interface.get_voice_metrics()
+            return {"success": True, "metrics": metrics}
+        except Exception as e:
+            logger.error(f"Error getting voice metrics: {e}")
+            return {"success": False, "error": str(e), "metrics": {}}
+
+    def get_voice_status(self) -> Dict[str, Any]:
+        """Get voice interface status"""
+        if not self.voice_interface:
+            return {
+                "success": False,
+                "error": "Voice interface not available",
+                "status": {},
+            }
+
+        try:
+            status = self.voice_interface.get_voice_status()
+            return {"success": True, "status": status}
+        except Exception as e:
+            logger.error(f"Error getting voice status: {e}")
+            return {"success": False, "error": str(e), "status": {}}
 
 
 # Utility functions
