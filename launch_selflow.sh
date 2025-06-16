@@ -89,17 +89,31 @@ cleanup_processes() {
         rm -f logs/selflow_tray.pid
     fi
     
+    if [ -f "logs/tauri_tray.pid" ]; then
+        TAURI_TRAY_PID=$(cat logs/tauri_tray.pid)
+        if kill -0 $TAURI_TRAY_PID 2>/dev/null; then
+            print_status "Stopping Tauri tray (PID: $TAURI_TRAY_PID)..."
+            kill $TAURI_TRAY_PID 2>/dev/null || true
+            sleep 2
+            # Force kill if still running
+            if kill -0 $TAURI_TRAY_PID 2>/dev/null; then
+                kill -9 $TAURI_TRAY_PID 2>/dev/null || true
+            fi
+        fi
+        rm -f logs/tauri_tray.pid
+    fi
+    
     # Kill any remaining SelFlow processes by name patterns (excluding this script)
     print_status "Killing remaining SelFlow processes..."
-    ps aux | grep -E "(selflow|SelFlow|run_selflow|launch_tray|macos_tray|test_chat)" | grep -v grep | grep -v "launch_selflow.sh" | awk '{print $2}' | xargs -r kill 2>/dev/null || true
+    ps aux | grep -E "(selflow|SelFlow|run_selflow|launch_tray|launch_tauri_tray|macos_tray|tauri_integrated_tray|test_chat)" | grep -v grep | grep -v "launch_selflow.sh" | awk '{print $2}' | xargs -r kill 2>/dev/null || true
     sleep 1
     
     # Force kill any stubborn processes
-    ps aux | grep -E "(selflow|SelFlow|run_selflow|launch_tray|macos_tray|test_chat)" | grep -v grep | grep -v "launch_selflow.sh" | awk '{print $2}' | xargs -r kill -9 2>/dev/null || true
+    ps aux | grep -E "(selflow|SelFlow|run_selflow|launch_tray|launch_tauri_tray|macos_tray|tauri_integrated_tray|test_chat)" | grep -v grep | grep -v "launch_selflow.sh" | awk '{print $2}' | xargs -r kill -9 2>/dev/null || true
     sleep 1
     
     # Kill any Python processes running SelFlow scripts (excluding this script)
-    ps aux | grep -E "(python|Python).*(selflow|run_selflow|launch_tray|macos_tray)" | grep -v grep | grep -v "launch_selflow.sh" | awk '{print $2}' | xargs -r kill -9 2>/dev/null || true
+    ps aux | grep -E "(python|Python).*(selflow|run_selflow|launch_tray|launch_tauri_tray|macos_tray|tauri_integrated_tray)" | grep -v grep | grep -v "launch_selflow.sh" | awk '{print $2}' | xargs -r kill -9 2>/dev/null || true
     
     # Additional cleanup for any Python processes in the project directory (excluding this script)
     CURRENT_DIR=$(pwd)
@@ -108,12 +122,12 @@ cleanup_processes() {
     sleep 2
     
     # Verify cleanup - show any remaining SelFlow processes (excluding this script)
-    REMAINING=$(ps aux | grep -E "(selflow|SelFlow|run_selflow|launch_tray|macos_tray)" | grep -v grep | grep -v "launch_selflow.sh" | wc -l)
+    REMAINING=$(ps aux | grep -E "(selflow|SelFlow|run_selflow|launch_tray|launch_tauri_tray|macos_tray|tauri_integrated_tray)" | grep -v grep | grep -v "launch_selflow.sh" | wc -l)
     if [ "$REMAINING" -gt 0 ]; then
         print_warning "Found $REMAINING remaining SelFlow processes:"
-        ps aux | grep -E "(selflow|SelFlow|run_selflow|launch_tray|macos_tray)" | grep -v grep | grep -v "launch_selflow.sh" | awk '{print "  PID " $2 ": " $11 " " $12 " " $13}'
+        ps aux | grep -E "(selflow|SelFlow|run_selflow|launch_tray|launch_tauri_tray|macos_tray|tauri_integrated_tray)" | grep -v grep | grep -v "launch_selflow.sh" | awk '{print "  PID " $2 ": " $11 " " $12 " " $13}'
         print_status "Force killing remaining processes..."
-        ps aux | grep -E "(selflow|SelFlow|run_selflow|launch_tray|macos_tray)" | grep -v grep | grep -v "launch_selflow.sh" | awk '{print $2}' | xargs -r kill -9 2>/dev/null || true
+        ps aux | grep -E "(selflow|SelFlow|run_selflow|launch_tray|launch_tauri_tray|macos_tray|tauri_integrated_tray)" | grep -v grep | grep -v "launch_selflow.sh" | awk '{print $2}' | xargs -r kill -9 2>/dev/null || true
         sleep 1
     fi
     
@@ -191,6 +205,29 @@ start_tray() {
     fi
 }
 
+# Function to start the Tauri-integrated tray
+start_tauri_tray() {
+    print_status "Starting Tauri-integrated system tray..."
+    
+    # Start Tauri tray in background using virtual environment with correct Python path
+    nohup bash -c "source selflow_env/bin/activate && PYTHONPATH=$(pwd) python launch_tauri_tray.py" > logs/tauri_tray.log 2>&1 &
+    TRAY_PID=$!
+    
+    print_success "Tauri-integrated tray started (PID: $TRAY_PID)"
+    echo $TRAY_PID > logs/tauri_tray.pid
+    
+    # Wait a moment
+    sleep 2
+    
+    # Check if it's running
+    if kill -0 $TRAY_PID 2>/dev/null; then
+        print_success "Tauri-integrated tray running - check your menu bar!"
+        print_status "🖥️ You can now launch the beautiful desktop app from the tray!"
+    else
+        print_warning "Tauri-integrated tray may have failed (check logs/tauri_tray.log)"
+    fi
+}
+
 # Function to show system status
 show_status() {
     print_status "System Status:"
@@ -218,6 +255,18 @@ show_status() {
         fi
     else
         print_warning "System Tray: Not started"
+    fi
+    
+    # Check Tauri tray
+    if [ -f "logs/tauri_tray.pid" ]; then
+        TAURI_TRAY_PID=$(cat logs/tauri_tray.pid)
+        if kill -0 $TAURI_TRAY_PID 2>/dev/null; then
+            print_success "Tauri Tray: Running (PID: $TAURI_TRAY_PID) 🖥️"
+        else
+            print_warning "Tauri Tray: Not running"
+        fi
+    else
+        print_warning "Tauri Tray: Not started"
     fi
     
     echo ""
@@ -313,8 +362,29 @@ main() {
             restart_tray
             show_status
             ;;
+        "tauri")
+            check_venv
+            activate_venv
+            cleanup_processes
+            check_system
+            start_main_system
+            start_tauri_tray
+            show_status
+            echo ""
+            print_success "SelFlow system with Tauri-integrated tray launched!"
+            print_status "🖥️ Click the tray icon and select 'Launch Desktop App'"
+            print_status "Use './launch_selflow.sh status' to check status"
+            ;;
+        "desktop")
+            print_status "Launching desktop app directly..."
+            if [ -f "package.json" ]; then
+                npm run tauri:dev
+            else
+                print_error "package.json not found. Please run 'npm install' first."
+            fi
+            ;;
         *)
-            echo "Usage: $0 {start|stop|status|logs|restart|tray}"
+            echo "Usage: $0 {start|stop|status|logs|restart|tray|tauri|desktop}"
             echo ""
             echo "Commands:"
             echo "  start   - Start the complete SelFlow system"
@@ -323,6 +393,8 @@ main() {
             echo "  logs    - Monitor system logs"
             echo "  restart - Restart the system"
             echo "  tray    - Restart just the system tray"
+            echo "  tauri   - Start system with Tauri-integrated tray"
+            echo "  desktop - Launch desktop app directly"
             exit 1
             ;;
     esac
