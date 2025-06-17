@@ -1,7 +1,7 @@
-# SelFlow Learning Phases: From Silent Observer to Intelligent OS
+# CelFlow Learning Phases: From Silent Observer to Intelligent OS
 
 ## Core Philosophy
-SelFlow begins as a completely invisible system that silently observes, learns, and builds intelligence before gradually revealing its capabilities. The user initially has no idea the system is even running - it just quietly learns their patterns and workflows.
+CelFlow begins as a completely invisible system that silently observes, learns, and builds intelligence before gradually revealing its capabilities. The user initially has no idea the system is even running - it just quietly learns their patterns and workflows.
 
 ## Phase 0: Silent Observer (Weeks 1-4)
 
@@ -89,7 +89,7 @@ Gradual Revelation:
 ### **Proactive Assistance**
 - **Workflow Offers**: "I can automate organizing your downloads"
 - **Smart Suggestions**: "Want me to prepare your standup notes?"
-- **Voice Activation**: Responds to "Hey SelFlow" for simple tasks
+- **Voice Activation**: Responds to "Hey CelFlow" for simple tasks
 - **Automation Execution**: Begins performing learned workflows
 
 ### **Gradual Feature Unveiling**
@@ -192,7 +192,7 @@ Data Protection:
 - [ ] User begins trusting system with important tasks
 
 ### **Phase 3 Success Criteria**
-- [ ] User prefers SelFlow to manual task execution
+- [ ] User prefers CelFlow to manual task execution
 - [ ] System handles 80% of routine tasks automatically
 - [ ] User rarely needs mouse/keyboard for common workflows
 - [ ] System anticipates needs accurately 90% of the time
@@ -205,4 +205,4 @@ The end state is a computing environment where:
 - **Intelligence is Personal**: System knows your unique patterns
 - **Interaction is Minimal**: You focus on creative work, not computer management
 
-SelFlow transforms from a silent observer into an indispensable partner that understands and amplifies your productivity while respecting your privacy and maintaining complete transparency. 
+CelFlow transforms from a silent observer into an indispensable partner that understands and amplifies your productivity while respecting your privacy and maintaining complete transparency. 

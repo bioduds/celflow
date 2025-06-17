@@ -1,10 +1,10 @@
-# 🧬 SelFlow Visual Meta-Learning System
+# 🧬 CelFlow Visual Meta-Learning System
 
 **Transform your digital behavior into intelligent AI agents - and watch it happen in real-time!**
 
-## 🎯 What is Visual SelFlow?
+## 🎯 What is Visual CelFlow?
 
-SelFlow has evolved from simple wrapper functions into a **true meta-learning ecosystem** where you can:
+CelFlow has evolved from simple wrapper functions into a **true meta-learning ecosystem** where you can:
 
 - 👀 **Watch your data being analyzed** in real-time
 - 🥚 **See embryos grow** from detected patterns  
@@ -50,7 +50,7 @@ pip install -r requirements_visual.txt
 
 ### 2. Launch the Visual System
 ```bash
-python run_visual_selflow.py
+python run_visual_celflow.py
 ```
 
 ### 3. Experience the Magic! ✨
@@ -159,7 +159,7 @@ python run_visual_selflow.py
 - CORS support for development
 - Async request handling
 
-#### 5. Main Launcher (`run_visual_selflow.py`)
+#### 5. Main Launcher (`run_visual_celflow.py`)
 - Orchestrates all components
 - Signal handling and graceful shutdown
 - Cross-platform compatibility
@@ -226,7 +226,7 @@ Run with debug logging:
 PYTHONPATH=. python -c "
 import logging
 logging.basicConfig(level=logging.DEBUG)
-from run_visual_selflow import main
+from run_visual_celflow import main
 main()
 "
 ```

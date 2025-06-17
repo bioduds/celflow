@@ -1,9 +1,9 @@
-# SelFlow - AI Operating System Layer
+# CelFlow - AI Operating System Layer
 
 ## Project Structure
 
 ```
-selflow/
+celflow/
 ├── app/
 │   ├── __init__.py
 │   ├── main.py                     # Main application entry point

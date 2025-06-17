@@ -1,7 +1,7 @@
-# SelFlow Multi-Agent Architecture
+# CelFlow Multi-Agent Architecture
 
 ## Core Philosophy
-SelFlow operates as a society of intelligent agents, each with specialized capabilities and knowledge. These agents observe, learn, collaborate, and act autonomously to create a seamless computing experience.
+CelFlow operates as a society of intelligent agents, each with specialized capabilities and knowledge. These agents observe, learn, collaborate, and act autonomously to create a seamless computing experience.
 
 ## Agent Ecosystem
 
@@ -242,7 +242,7 @@ Learning Cycle:
 
 ### **Agent Architecture**
 ```python
-class SelFlowAgent:
+class CelFlowAgent:
     def __init__(self, domain, model_core, capabilities):
         self.domain = domain
         self.model_core = model_core  # Specialized AI model
@@ -303,4 +303,4 @@ As the agent ecosystem matures, we expect emergent behaviors:
 - Distributed intelligence tackles complex challenges
 - Continuous innovation in automation strategies
 
-This multi-agent architecture transforms SelFlow from a simple AI assistant into a living, learning, evolving operating system that truly understands and amplifies human productivity. 
+This multi-agent architecture transforms CelFlow from a simple AI assistant into a living, learning, evolving operating system that truly understands and amplifies human productivity. 

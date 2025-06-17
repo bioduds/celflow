@@ -1,6 +1,6 @@
-# SelFlow Event Persistence System 🗄️
+# CelFlow Event Persistence System 🗄️
 
-The SelFlow Event Persistence System provides comprehensive, high-performance storage for all captured events, enabling true long-term memory for your AI Operating System.
+The CelFlow Event Persistence System provides comprehensive, high-performance storage for all captured events, enabling true long-term memory for your AI Operating System.
 
 ## 🌟 Features
 
@@ -69,14 +69,14 @@ CREATE TABLE system_stats (
 ## 🚀 Getting Started
 
 ### Automatic Integration
-Persistence is **enabled by default** when you run SelFlow:
+Persistence is **enabled by default** when you run CelFlow:
 
 ```bash
 # Headless mode with persistence
-python selflow.py
+python celflow.py
 
 # Full macOS integration with persistence
-python selflow_tray.py
+python celflow_tray.py
 ```
 
 ### Configuration
@@ -101,16 +101,16 @@ Query and analyze your event data:
 
 ```bash
 # Show database statistics
-python tools/selflow_events.py stats
+python tools/celflow_events.py stats
 
 # List recent events
-python tools/selflow_events.py list --hours 2 --limit 50
+python tools/celflow_events.py list --hours 2 --limit 50
 
 # Search for specific events
-python tools/selflow_events.py search "chrome" --limit 10
+python tools/celflow_events.py search "chrome" --limit 10
 
 # Export events to JSON
-python tools/selflow_events.py export events_backup.json --hours 24
+python tools/celflow_events.py export events_backup.json --hours 24
 ```
 
 ### Real-Time Dashboard
@@ -118,10 +118,10 @@ Monitor your system in real-time:
 
 ```bash
 # Launch the dashboard
-python tools/selflow_dashboard.py
+python tools/celflow_dashboard.py
 
 # Use custom database path
-python tools/selflow_dashboard.py --db /path/to/events.db
+python tools/celflow_dashboard.py --db /path/to/events.db
 ```
 
 The dashboard shows:
@@ -234,9 +234,9 @@ sqlite3 data/events.db "VACUUM;"
 # Check for other processes using the database
 lsof data/events.db
 
-# If needed, restart SelFlow
-pkill -f selflow
-python selflow_tray.py
+# If needed, restart CelFlow
+pkill -f celflow
+python celflow_tray.py
 ```
 
 **High disk usage:**
@@ -334,7 +334,7 @@ The persistence system is designed to be extensible. Key areas for contribution:
 
 ## 📄 License
 
-Part of the SelFlow AI Operating System project. See main project license for details.
+Part of the CelFlow AI Operating System project. See main project license for details.
 
 ---
 

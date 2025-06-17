@@ -1,10 +1,12 @@
-# SelFlow Configuration - Silent Learning Mode
+# CelFlow Configuration - Silent Learning Mode
+# This configuration enables CelFlow to learn patterns silently
+# without disrupting the user's workflow
 
 # Application Settings
 app:
-  name: "SelFlow"
-  version: "0.1.0"
-  mode: "silent_observer"  # silent_observer, gentle_hints, quiet_assistant, full_integration
+  name: "CelFlow"
+  version: "1.0.0"
+  mode: "silent_learning"
   debug: false
   log_level: "INFO"
 

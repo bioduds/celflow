@@ -1,4 +1,84 @@
-# SelFlow Emergent Agent Configuration
+# CelFlow Emergent Agent Configuration
+# Defines the types of agents that can emerge from the system
+
+# Agent Templates
+agent_templates:
+  
+  # File Operations Specialist
+  file_agent:
+    name: "FileFlow Agent"
+    description: "Specializes in file operations, organization, and management"
+    trigger_patterns:
+      - "file_create"
+      - "file_modify" 
+      - "file_delete"
+      - "directory_operations"
+    capabilities:
+      - "file_organization"
+      - "backup_management"
+      - "duplicate_detection"
+      - "smart_naming"
+    birth_threshold: 0.8
+    survival_threshold: 0.3
+    max_instances: 3
+    
+  # System Monitoring Agent
+  system_agent:
+    name: "SystemWatch Agent"
+    description: "Monitors system performance and health"
+    trigger_patterns:
+      - "system_performance"
+      - "resource_usage"
+      - "error_events"
+      - "crash_detection"
+    capabilities:
+      - "performance_monitoring"
+      - "resource_optimization"
+      - "error_prediction"
+      - "system_maintenance"
+    birth_threshold: 0.75
+    survival_threshold: 0.4
+    max_instances: 2
+    
+  # Application Usage Agent
+  app_agent:
+    name: "AppFlow Agent"
+    description: "Learns application usage patterns and optimizes workflows"
+    trigger_patterns:
+      - "app_launch"
+      - "app_switch"
+      - "workflow_patterns"
+      - "productivity_metrics"
+    capabilities:
+      - "workflow_optimization"
+      - "app_recommendations"
+      - "productivity_insights"
+      - "automation_suggestions"
+    birth_threshold: 0.85
+    survival_threshold: 0.35
+    max_instances: 4
+
+# Global Agent Settings
+global_settings:
+  max_total_agents: 15
+  agent_lifespan_hours: 168  # 1 week
+  memory_sharing_enabled: true
+  collaborative_learning: true
+  agent_communication_protocol: "message_passing"
+  
+# Evolution Parameters
+evolution:
+  mutation_rate: 0.1
+  crossover_probability: 0.3
+  selection_pressure: 0.7
+  fitness_evaluation_interval: 3600  # 1 hour
+  
+# Resource Management
+resources:
+  max_memory_per_agent_mb: 64
+  max_cpu_per_agent_percent: 5
+  shared_memory_pool_mb: 256
+  garbage_collection_interval: 1800  # 30 minutes
 
 # Embryo Pool Settings
 embryo_pool:

@@ -1,53 +1,57 @@
-# SelFlow Central AI Brain Configuration
-# Gemma 3:4B via Ollama Integration
+# CelFlow Central AI Brain Configuration
+# Configuration for the central AI system that coordinates all agents
 
-ai_brain:
-  model_name: "gemma3:4b"
-  base_url: "http://localhost:11434"
-  context_window: 8192
-  max_tokens: 2048
+# Model Configuration
+model:
+  provider: "ollama"  # ollama, openai, anthropic
+  model_name: "llama3.2:3b"  # Lightweight model for local processing
   temperature: 0.7
-  timeout: 30
-  retry_attempts: 3
+  max_tokens: 2048
+  context_window: 8192
+
+# Central Brain Settings
+central_brain:
+  enabled: true
+  learning_rate: 0.01
+  memory_consolidation_interval: 3600  # seconds
+  pattern_recognition_threshold: 0.75
+  decision_confidence_threshold: 0.8
   
-context_management:
-  max_conversation_history: 50
-  context_refresh_interval: 3600  # 1 hour in seconds
-  memory_persistence: true
-  max_context_tokens: 6000  # Leave room for response
+# Agent Orchestration
+orchestration:
+  max_concurrent_agents: 10
+  agent_spawn_threshold: 0.85
+  agent_termination_threshold: 0.2
+  resource_allocation_strategy: "adaptive"  # fixed, adaptive, competitive
   
+# Learning and Adaptation
+learning:
+  meta_learning_enabled: true
+  pattern_evolution_rate: 0.05
+  feedback_integration_weight: 0.3
+  experience_replay_enabled: true
+  experience_buffer_size: 10000
+  
+# System Integration
+integration:
+  tray_integration: true
+  voice_interface: false
+  web_dashboard: true
+  api_server: false
+  
+# Performance and Resources
 performance:
-  response_timeout: 5.0
-  stream_responses: true
-  cache_responses: true
-  max_concurrent_requests: 3
+  max_memory_mb: 1024
+  max_cpu_percent: 25
+  batch_processing_size: 100
+  async_processing: true
   
-# Agent specializations and capabilities
-agent_capabilities:
-  user_interface:
-    enabled: true
-    personality: "helpful_assistant"
-    proactive_suggestions: true
-    
-  agent_orchestrator:
-    enabled: true
-    max_parallel_agents: 5
-    coordination_timeout: 30
-    
-  embryo_trainer:
-    enabled: true
-    training_validation_threshold: 0.8
-    birth_readiness_threshold: 0.9
-    
-  system_controller:
-    enabled: true
-    safety_validation: true
-    command_confirmation: false  # Set to true for extra safety
-    
-  pattern_validator:
-    enabled: true
-    coherence_threshold: 0.75
-    cross_validation: true
+# Privacy and Security
+privacy:
+  local_processing_only: true
+  data_encryption: true
+  sensitive_data_filtering: true
+  audit_logging: true
 
 # Logging and monitoring
 logging:

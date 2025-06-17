@@ -1,10 +1,10 @@
-# SelFlow AI Agents Testing Guide
+# CelFlow AI Agents Testing Guide
 
-This guide shows you how to test the 5 AI agents that exist in SelFlow and verify their functionality.
+This guide shows you how to test the 5 AI agents that exist in CelFlow and verify their functionality.
 
 ## 🤖 The 5 AI Agents
 
-Based on code analysis, SelFlow has these **5 actual AI agents**:
+Based on code analysis, CelFlow has these **5 actual AI agents**:
 
 1. **UserInterfaceAgent** - Natural language processing and user interactions
 2. **AgentOrchestrator** - Complex task coordination and delegation  
@@ -104,8 +104,8 @@ Then ask questions like:
 
 1. **Prerequisites**:
    ```bash
-   # Make sure SelFlow system is running
-   ./launch_selflow.sh start
+   # Make sure CelFlow system is running
+   ./launch_celflow.sh start
    
    # Ensure Ollama is running
    ollama serve
@@ -120,7 +120,7 @@ Then ask questions like:
    ```
    🧪 RUNNING COMPREHENSIVE AGENT TEST SUITE
    ============================================================
-   🚀 Setting up SelFlow Agent Testing Environment
+   🚀 Setting up CelFlow Agent Testing Environment
    ✅ Ollama client ready
    ✅ Central AI Brain initialized
       - Agents available: 5
@@ -164,14 +164,14 @@ Then ask questions like:
 
 2. **"Agent not available"**
    ```bash
-   # Restart SelFlow system
-   ./launch_selflow.sh restart
+   # Restart CelFlow system
+   ./launch_celflow.sh restart
    ```
 
 3. **Import errors**
    ```bash
    # Activate virtual environment
-   source selflow_env/bin/activate
+   source celflow_env/bin/activate
    
    # Install dependencies
    pip install -r requirements.txt
@@ -268,12 +268,12 @@ for i in {1..5}; do python test_all_agents.py --agent ui & done; wait
 python -m memory_profiler test_all_agents.py
 ```
 
-### Integration with SelFlow System
+### Integration with CelFlow System
 ```bash
-# Test while SelFlow is running
-./launch_selflow.sh start
+# Test while CelFlow is running
+./launch_celflow.sh start
 python test_all_agents.py
-./launch_selflow.sh stop
+./launch_celflow.sh stop
 ```
 
 This comprehensive testing approach ensures all 5 AI agents are working correctly and helps identify any issues with their functionality or integration. 

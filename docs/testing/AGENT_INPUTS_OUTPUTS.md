@@ -1,6 +1,6 @@
-# SelFlow AI Agents: Inputs and Outputs Reference
+# CelFlow AI Agents: Inputs and Outputs Reference
 
-This document provides a comprehensive overview of the inputs and outputs for each of the 5 AI agents in SelFlow.
+This document provides a comprehensive overview of the inputs and outputs for each of the 5 AI agents in CelFlow.
 
 ## 🎭 1. UserInterfaceAgent
 

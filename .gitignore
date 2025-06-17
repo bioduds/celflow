@@ -1,7 +1,7 @@
-# SelFlow .gitignore
+# CelFlow .gitignore
 
 # Virtual Environment
-selflow_env/
+celflow_env/
 venv/
 env/
 .venv/
@@ -98,7 +98,7 @@ Temporary Items
 # Logs
 *.log
 logs/
-selflow.log
+celflow.log
 
 # Data & Models (sensitive/large files)
 data/patterns/*.dat
@@ -284,7 +284,7 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# SelFlow specific
+# CelFlow specific
 logs/
 data/events.db*
 data/patterns/*.json
@@ -320,7 +320,7 @@ env/
 ENV/
 env.bak/
 venv.bak/
-selflow_env/
+celflow_env/
 
 # IDE
 .vscode/

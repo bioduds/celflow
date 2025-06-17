@@ -1,7 +1,7 @@
-# SelFlow: AI Operating System Layer
+# CelFlow: AI Operating System Layer
 
 ## Vision Statement
-SelFlow is an AI-powered operational layer that sits on top of macOS, gradually learning to automate and control every aspect of your computing experience through natural language and intelligent automation.
+CelFlow is an AI-powered operational layer that sits on top of macOS, gradually learning to automate and control every aspect of your computing experience through natural language and intelligent automation.
 
 ## Core Philosophy
 - **Voice-First Computing**: Replace mouse/keyboard with natural speech
@@ -15,7 +15,7 @@ SelFlow is an AI-powered operational layer that sits on top of macOS, gradually 
 ### Layer 1: System Control & Automation
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    SelFlow AI Layer                     │
+│                    CelFlow AI Layer                     │
 ├─────────────────────────────────────────────────────────┤
 │  Voice Commands → Intent Recognition → Action Execution │
 │  Screen Reading → Pattern Learning → Task Automation    │
@@ -114,7 +114,7 @@ SelFlow is an AI-powered operational layer that sits on top of macOS, gradually 
 - **No Cloud Dependencies**: System works entirely offline
 
 ### **Permission Model**
-- **Granular Controls**: User chooses what SelFlow can access
+- **Granular Controls**: User chooses what CelFlow can access
 - **Audit Trail**: Complete log of all system actions
 - **Revocable Access**: Easy to disable any automation
 - **Sandbox Execution**: Safe execution of learned automations
