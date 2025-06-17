@@ -208,9 +208,54 @@ start_tray() {
     fi
 }
 
+# Function to check and install Tauri dependencies
+check_tauri_deps() {
+    print_status "Checking Tauri dependencies..."
+    
+    # Check if Node.js is installed
+    if ! command -v node >/dev/null 2>&1; then
+        print_error "Node.js not found. Please install Node.js first."
+        return 1
+    fi
+    
+    # Check if npm is installed
+    if ! command -v npm >/dev/null 2>&1; then
+        print_error "npm not found. Please install npm first."
+        return 1
+    fi
+    
+    # Check if Rust is installed
+    if ! command -v rustc >/dev/null 2>&1; then
+        print_status "Installing Rust..."
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+        source "$HOME/.cargo/env"
+    fi
+    
+    # Install Tauri CLI if not installed
+    if ! cargo tauri --version >/dev/null 2>&1; then
+        print_status "Installing Tauri CLI..."
+        cargo install tauri-cli
+    fi
+    
+    # Install frontend dependencies if needed
+    if [ ! -d "frontend/desktop/node_modules" ]; then
+        print_status "Installing frontend dependencies..."
+        cd frontend/desktop && npm install && cd ../..
+    fi
+    
+    print_success "Tauri dependencies checked and installed"
+    return 0
+}
+
 # Function to start the Tauri-integrated tray
 start_tauri_tray() {
     print_status "Starting Tauri-integrated system tray..."
+    
+    # Check Tauri dependencies first
+    if ! check_tauri_deps; then
+        print_warning "Skipping Tauri tray due to missing dependencies"
+        return 1
+    fi
     
     # Start Tauri tray in background using virtual environment with correct Python path
     nohup bash -c "source environments/celflow_env/bin/activate && PYTHONPATH=$(pwd) python3 backend/scripts/launch_tauri_tray.py" > logs/tauri_tray.log 2>&1 &
@@ -339,7 +384,7 @@ main() {
             cleanup_processes
             check_system
             start_main_system
-            start_tray
+            start_tauri_tray
             show_status
             echo ""
             print_success "CelFlow system launched successfully!"
