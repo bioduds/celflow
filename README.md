@@ -1,4 +1,4 @@
-# CelFlow - Self-Evolving AI Operating System Layer
+# CelFlow - Celular Flow AI
 
 CelFlow is an innovative AI system that learns your digital patterns and evolves specialized agents to enhance your computing experience. It operates silently in the background, observing your interactions and gradually developing intelligent assistants tailored to your unique workflow.
 
