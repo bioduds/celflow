@@ -1,425 +1,414 @@
 import React, { useState, useEffect, useRef } from "react";
 import "./index.css";
 
-// Mock data types
-interface SystemMetrics {
-  cpu_usage: number;
-  memory_usage: number;
-  disk_usage: {
-    total: number;
-    used: number;
-    free: number;
-  };
-  events_per_second: number;
-}
-
-// Blob state types
-interface BlobState {
-  mood: 'happy' | 'sad' | 'excited' | 'sleeping' | 'thinking' | 'dancing';
-  color: string;
-  size: number;
-  position: { x: number; y: number };
-  message: string;
-}
-
-// Message types
+// Types
 interface Message {
-  id: number;
+  id: string;
   text: string;
   sender: 'user' | 'ai';
   timestamp: Date;
+  visualization?: VisualizationData;
+}
+
+interface VisualizationData {
+  type: 'chart' | 'plot' | 'table' | 'graph' | 'text' | 'code';
+  title?: string;
+  data?: any;
+  config?: any;
+  content?: string;
+}
+
+interface ChatResponse {
+  success: boolean;
+  message: string;
+  response_time: number;
+  interaction_id: number;
+  agent_info: {
+    agent: string;
+    context_used: boolean;
+  };
+  visualization?: VisualizationData;
+  error?: string;
+}
+
+interface SystemStatus {
+  status: string;
+  uptime: number;
+  model_name: string;
+  agents_active: number;
+  interaction_count: number;
+  health_status: any;
 }
 
 function App() {
-  const [showSimpleUI, setShowSimpleUI] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
-    { id: 1, text: "Hello! I'm CelFlow AI. Meet Cel, your blob companion! Try saying 'make Cel happy' or 'make Cel dance'!", sender: 'ai', timestamp: new Date() }
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
-  const [blobState, setBlobState] = useState<BlobState>({
-    mood: 'happy',
-    color: '#667eea',
-    size: 200,
-    position: { x: 50, y: 50 },
-    message: "Hi! I'm Cel!"
-  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [aiStatus, setAiStatus] = useState<SystemStatus | null>(null);
+  const [currentVisualization, setCurrentVisualization] = useState<VisualizationData | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animationRef = useRef<number>();
-  const timeRef = useRef<number>(0);
+  const visualizationRef = useRef<HTMLDivElement>(null);
 
-  // Mock system metrics
-  const systemMetrics: SystemMetrics = {
-    cpu_usage: 12.5,
-    memory_usage: 1024.5,
-    disk_usage: {
-      total: 512000,
-      used: 128000,
-      free: 384000
-    },
-    events_per_second: 42.5
+  // API base URL
+  const API_BASE = 'http://127.0.0.1:8000';
+
+  // Check AI system health on startup
+  useEffect(() => {
+    checkAiHealth();
+    const healthInterval = setInterval(checkAiHealth, 30000); // Check every 30 seconds
+    return () => clearInterval(healthInterval);
+  }, []);
+
+  const checkAiHealth = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/health`);
+      if (response.ok) {
+        const status: SystemStatus = await response.json();
+        setAiStatus(status);
+      } else {
+        console.error('AI health check failed:', response.status);
+        setAiStatus(null);
+      }
+    } catch (error) {
+      console.error('AI health check error:', error);
+      setAiStatus(null);
+    }
   };
 
-  // Scroll to bottom of messages
+  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Animate the blob
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+  const sendMessage = async () => {
+    if (!inputText.trim() || isLoading) return;
     
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const animate = () => {
-      timeRef.current += 0.01;
-      
-      // Clear canvas
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
-      // Calculate blob center
-      const centerX = (canvas.width * blobState.position.x) / 100;
-      const centerY = (canvas.height * blobState.position.y) / 100;
-      
-      // Draw blob with animated shape
-      ctx.fillStyle = blobState.color;
-      ctx.beginPath();
-      
-      const points = 8;
-      for (let i = 0; i < points; i++) {
-        const angle = (i / points) * Math.PI * 2;
-        let radius = blobState.size;
-        
-        // Add mood-based animations
-        switch (blobState.mood) {
-          case 'dancing':
-            radius += Math.sin(timeRef.current * 5 + i) * 20;
-            break;
-          case 'excited':
-            radius += Math.sin(timeRef.current * 10 + i) * 10;
-            break;
-          case 'sleeping':
-            radius += Math.sin(timeRef.current * 0.5) * 5;
-            break;
-          case 'thinking':
-            radius += Math.sin(timeRef.current * 2 + i * 0.5) * 15;
-            break;
-          case 'sad':
-            radius -= 20;
-            break;
-          default:
-            radius += Math.sin(timeRef.current * 2 + i) * 10;
-        }
-        
-        const x = centerX + Math.cos(angle) * radius;
-        const y = centerY + Math.sin(angle) * radius;
-        
-        if (i === 0) {
-          ctx.moveTo(x, y);
-        } else {
-          ctx.quadraticCurveTo(
-            centerX + Math.cos(angle - Math.PI / points) * radius * 1.5,
-            centerY + Math.sin(angle - Math.PI / points) * radius * 1.5,
-            x, y
-          );
-        }
-      }
-      
-      ctx.closePath();
-      ctx.fill();
-      
-      // Draw eyes
-      const eyeSize = blobState.mood === 'sleeping' ? 2 : 10;
-      const eyeY = centerY - 20;
-      
-      ctx.fillStyle = 'white';
-      ctx.beginPath();
-      ctx.arc(centerX - 30, eyeY, eyeSize, 0, Math.PI * 2);
-      ctx.arc(centerX + 30, eyeY, eyeSize, 0, Math.PI * 2);
-      ctx.fill();
-      
-      if (blobState.mood !== 'sleeping') {
-        ctx.fillStyle = 'black';
-        ctx.beginPath();
-        ctx.arc(centerX - 30, eyeY, 5, 0, Math.PI * 2);
-        ctx.arc(centerX + 30, eyeY, 5, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      
-      // Draw mouth based on mood
-      ctx.strokeStyle = 'white';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      
-      switch (blobState.mood) {
-        case 'happy':
-        case 'dancing':
-        case 'excited':
-          ctx.arc(centerX, centerY + 10, 30, 0.2 * Math.PI, 0.8 * Math.PI);
-          break;
-        case 'sad':
-          ctx.arc(centerX, centerY + 40, 30, 1.2 * Math.PI, 1.8 * Math.PI);
-          break;
-        case 'thinking':
-          ctx.moveTo(centerX - 20, centerY + 20);
-          ctx.lineTo(centerX + 20, centerY + 20);
-          break;
-      }
-      ctx.stroke();
-      
-      // Draw message
-      ctx.fillStyle = blobState.color;
-      ctx.font = '20px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText(blobState.message, centerX, canvas.height - 50);
-      
-      animationRef.current = requestAnimationFrame(animate);
-    };
-    
-    animate();
-    
-    return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
-    };
-  }, [blobState]);
-
-  // Process AI commands
-  const processCommand = (text: string) => {
-    const lowerText = text.toLowerCase();
-    let response = "";
-    let newBlobState = { ...blobState };
-    
-    if (lowerText.includes('happy')) {
-      newBlobState.mood = 'happy';
-      newBlobState.message = "Yay! I'm happy!";
-      response = "I've made Cel happy! Look at that smile!";
-    } else if (lowerText.includes('sad')) {
-      newBlobState.mood = 'sad';
-      newBlobState.message = "Aww, I'm sad...";
-      response = "Oh no, Cel is sad now. Maybe try cheering them up?";
-    } else if (lowerText.includes('dance') || lowerText.includes('dancing')) {
-      newBlobState.mood = 'dancing';
-      newBlobState.message = "Let's dance!";
-      response = "Cel is dancing! Look at those moves!";
-    } else if (lowerText.includes('sleep')) {
-      newBlobState.mood = 'sleeping';
-      newBlobState.message = "Zzz...";
-      response = "Shh... Cel is sleeping now.";
-    } else if (lowerText.includes('think')) {
-      newBlobState.mood = 'thinking';
-      newBlobState.message = "Hmm...";
-      response = "Cel is deep in thought...";
-    } else if (lowerText.includes('excited')) {
-      newBlobState.mood = 'excited';
-      newBlobState.message = "Woohoo!";
-      response = "Cel is super excited!";
-    } else if (lowerText.includes('big')) {
-      newBlobState.size = Math.min(300, newBlobState.size + 50);
-      newBlobState.message = "I'm growing!";
-      response = "Cel is getting bigger!";
-    } else if (lowerText.includes('small')) {
-      newBlobState.size = Math.max(100, newBlobState.size - 50);
-      newBlobState.message = "I'm shrinking!";
-      response = "Cel is getting smaller!";
-    } else if (lowerText.includes('red')) {
-      newBlobState.color = '#ef4444';
-      response = "Cel is now red!";
-    } else if (lowerText.includes('blue')) {
-      newBlobState.color = '#3b82f6';
-      response = "Cel is now blue!";
-    } else if (lowerText.includes('green')) {
-      newBlobState.color = '#10b981';
-      response = "Cel is now green!";
-    } else if (lowerText.includes('purple')) {
-      newBlobState.color = '#8b5cf6';
-      response = "Cel is now purple!";
-    } else if (lowerText.includes('move') && lowerText.includes('left')) {
-      newBlobState.position.x = Math.max(20, newBlobState.position.x - 20);
-      response = "Moving Cel to the left!";
-    } else if (lowerText.includes('move') && lowerText.includes('right')) {
-      newBlobState.position.x = Math.min(80, newBlobState.position.x + 20);
-      response = "Moving Cel to the right!";
-    } else if (lowerText.includes('move') && lowerText.includes('up')) {
-      newBlobState.position.y = Math.max(20, newBlobState.position.y - 20);
-      response = "Moving Cel up!";
-    } else if (lowerText.includes('move') && lowerText.includes('down')) {
-      newBlobState.position.y = Math.min(80, newBlobState.position.y + 20);
-      response = "Moving Cel down!";
-    } else {
-      response = "I can control Cel! Try commands like: 'make Cel happy', 'make Cel dance', 'make Cel big', 'turn Cel red', 'move Cel left', etc.";
-    }
-    
-    setBlobState(newBlobState);
-    return response;
-  };
-
-  const handleSendMessage = () => {
-    if (!inputText.trim()) return;
-    
-    // Add user message
     const userMessage: Message = {
-      id: messages.length + 1,
+      id: Date.now().toString(),
       text: inputText,
       sender: 'user',
       timestamp: new Date()
     };
     
-    // Process command and get AI response
-    const aiResponse = processCommand(inputText);
-    
-    const aiMessage: Message = {
-      id: messages.length + 2,
-      text: aiResponse,
-      sender: 'ai',
-      timestamp: new Date()
-    };
-    
-    setMessages([...messages, userMessage, aiMessage]);
+    setMessages(prev => [...prev, userMessage]);
     setInputText('');
+    setIsLoading(true);
+    
+    try {
+      // Send message to AI with visualization context
+      const chatResponse = await fetch(`${API_BASE}/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: inputText,
+          context_type: 'visualization_chat',
+          request_visualization: true
+        })
+      });
+      
+      if (chatResponse.ok) {
+        const chatResult: ChatResponse = await chatResponse.json();
+        
+        const aiMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          text: chatResult.success ? chatResult.message : 'Sorry, I encountered an error processing your message.',
+          sender: 'ai',
+          timestamp: new Date(),
+          visualization: chatResult.visualization
+        };
+        
+        setMessages(prev => [...prev, aiMessage]);
+        
+        // Update main visualization if provided
+        if (chatResult.visualization) {
+          setCurrentVisualization(chatResult.visualization);
+        }
+      } else {
+        throw new Error('Chat API call failed');
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        text: aiStatus ? 
+          'Sorry, I encountered an error. Please try again.' : 
+          'AI system is not available. Please make sure the CelFlow AI server is running.',
+        sender: 'ai',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  // Simple test component
-  const SimpleTestComponent = () => (
-    <div style={{ 
-      width: '100vw', 
-      height: '100vh', 
-      backgroundColor: 'blue', 
-      color: 'white',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'center',
-      alignItems: 'center',
-      fontSize: '24px',
-      padding: '20px',
-      boxSizing: 'border-box'
-    }}>
-      <h1 style={{ marginBottom: '20px' }}>CelFlow Basic Test</h1>
-      <p>If you can see this blue screen with text, React is working!</p>
-      <div style={{ 
-        backgroundColor: 'white', 
-        color: 'blue', 
-        padding: '20px', 
-        borderRadius: '10px',
-        marginTop: '20px',
-        maxWidth: '80%',
-        textAlign: 'center'
-      }}>
-        This is a simplified test to check rendering
-      </div>
-      <button 
-        onClick={() => setShowSimpleUI(false)}
-        style={{
-          marginTop: '20px',
-          padding: '10px 20px',
-          backgroundColor: 'white',
-          color: 'blue',
-          border: 'none',
-          borderRadius: '5px',
-          cursor: 'pointer'
-        }}
-      >
-        Show Main UI
-      </button>
-    </div>
-  );
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
 
-  // Basic system overview component
-  const BasicSystemOverview = ({ metrics }: { metrics: SystemMetrics }) => (
-    <div className="glass-panel rounded-lg p-6 shadow-lg">
-      <h2 className="text-2xl font-bold mb-4 text-neural-800">System Overview</h2>
-      <div className="space-y-4">
-        <div className="flex justify-between">
-          <span className="text-neural-600">CPU Usage:</span>
-          <span className="font-mono">{metrics.cpu_usage.toFixed(1)}%</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-neural-600">Memory Usage:</span>
-          <span className="font-mono">{metrics.memory_usage.toFixed(1)} MB</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-neural-600">Disk Free:</span>
-          <span className="font-mono">{(metrics.disk_usage.free / 1024).toFixed(1)} GB</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-neural-600">Events/Second:</span>
-          <span className="font-mono">{metrics.events_per_second.toFixed(1)}</span>
-        </div>
-      </div>
-    </div>
-  );
-
-  // If showing simple UI
-  if (showSimpleUI) {
-    return <SimpleTestComponent />;
-  }
+  const renderVisualization = (viz: VisualizationData) => {
+    switch (viz.type) {
+      case 'chart':
+        return (
+          <div className="bg-gray-800 rounded-lg p-6 border border-gray-600">
+            <h3 className="text-lg font-semibold text-blue-400 mb-4">{viz.title || 'Chart'}</h3>
+            <div className="text-center text-gray-400 py-8">
+              📊 Chart visualization would render here
+              <br />
+              <small className="text-xs">Data: {JSON.stringify(viz.data).substring(0, 100)}...</small>
+            </div>
+          </div>
+        );
+      case 'plot':
+        return (
+          <div className="bg-gray-800 rounded-lg p-6 border border-gray-600">
+            <h3 className="text-lg font-semibold text-green-400 mb-4">{viz.title || 'Plot'}</h3>
+            <div className="text-center text-gray-400 py-8">
+              📈 Plot visualization would render here
+              <br />
+              <small className="text-xs">Config: {JSON.stringify(viz.config).substring(0, 100)}...</small>
+            </div>
+          </div>
+        );
+      case 'table':
+        return (
+          <div className="bg-gray-800 rounded-lg p-6 border border-gray-600">
+            <h3 className="text-lg font-semibold text-purple-400 mb-4">{viz.title || 'Data Table'}</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-gray-300">
+                <thead>
+                  <tr className="border-b border-gray-600">
+                    <th className="text-left p-2">Column 1</th>
+                    <th className="text-left p-2">Column 2</th>
+                    <th className="text-left p-2">Column 3</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b border-gray-700">
+                    <td className="p-2">Sample data</td>
+                    <td className="p-2">would render</td>
+                    <td className="p-2">here</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      case 'code':
+        return (
+          <div className="bg-gray-900 rounded-lg p-6 border border-gray-600">
+            <h3 className="text-lg font-semibold text-yellow-400 mb-4">{viz.title || 'Code Output'}</h3>
+            <pre className="bg-black rounded p-4 text-green-400 text-sm overflow-x-auto">
+              <code>{viz.content || 'Code output would appear here'}</code>
+            </pre>
+          </div>
+        );
+      case 'text':
+        return (
+          <div className="bg-gray-800 rounded-lg p-6 border border-gray-600">
+            <h3 className="text-lg font-semibold text-cyan-400 mb-4">{viz.title || 'Analysis Result'}</h3>
+            <div className="text-gray-300 whitespace-pre-wrap">
+              {viz.content || 'Text analysis would appear here'}
+            </div>
+          </div>
+        );
+      default:
+        return (
+          <div className="bg-gray-800 rounded-lg p-6 border border-gray-600">
+            <h3 className="text-lg font-semibold text-gray-400 mb-4">Visualization</h3>
+            <div className="text-center text-gray-500 py-8">
+              🔮 AI-generated visualization will appear here
+            </div>
+          </div>
+        );
+    }
+  };
 
   // Main UI
   return (
-    <div className="h-screen flex bg-gradient-to-br from-gray-900 to-gray-800">
-      {/* Left 2/3: Blob creature */}
-      <div className="flex-1 flex items-center justify-center p-8">
-        <div className="relative w-full h-full max-w-4xl max-h-4xl">
-          <canvas 
-            ref={canvasRef}
-            width={800}
-            height={800}
-            className="w-full h-full"
-          />
-        </div>
-      </div>
-      
-      {/* Right 1/3: Chat interface */}
-      <div className="w-96 bg-gray-800 border-l border-gray-700 flex flex-col">
+    <div className="h-screen bg-gray-900 text-white flex">
+      {/* Left side - Chat interface (1/3) */}
+      <div className="w-96 bg-gray-800 border-r border-gray-700 flex flex-col">
+        {/* Chat header */}
         <div className="p-4 border-b border-gray-700">
-          <h2 className="text-xl font-bold text-white">CelFlow AI Chat</h2>
-          <p className="text-sm text-gray-400">Chat with me to control Cel!</p>
+          <h2 className="text-xl font-bold text-blue-400">CelFlow AI Chat</h2>
+          <p className="text-sm text-gray-400">
+            Ask Gemma 3:4b to analyze data and create visualizations
+          </p>
+          
+          {/* AI System status */}
+          <div className="mt-3 bg-black/30 rounded-lg p-2">
+            <div className="text-xs">
+              <div className="text-blue-400 font-semibold">AI Status</div>
+              {aiStatus ? (
+                <>
+                  <div>Model: <span className="text-cyan-400">{aiStatus.model_name}</span></div>
+                  <div>Status: <span className="text-green-400">{aiStatus.status}</span></div>
+                  <div>Agents: <span className="text-purple-400">{aiStatus.agents_active}</span></div>
+                </>
+              ) : (
+                <div className="text-red-400">Offline</div>
+              )}
+            </div>
+          </div>
         </div>
         
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {messages.length === 0 && (
+            <div className="text-center text-gray-500 mt-8">
+              <p>🧠 Welcome to CelFlow AI!</p>
+              <p className="text-sm mt-2">Ask me to:</p>
+              <div className="text-xs mt-2 space-y-1 text-left">
+                <p>• "Plot a sine wave"</p>
+                <p>• "Create a bar chart of sales data"</p>
+                <p>• "Analyze this dataset"</p>
+                <p>• "Show me a scatter plot"</p>
+                <p>• "Generate random data visualization"</p>
+              </div>
+            </div>
+          )}
+          
           {messages.map((message) => (
             <div
               key={message.id}
               className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className={`max-w-[80%] rounded-lg p-3 ${
+                className={`max-w-xs px-4 py-2 rounded-lg ${
                   message.sender === 'user'
                     ? 'bg-blue-600 text-white'
-                    : 'bg-gray-700 text-white'
+                    : 'bg-gray-700 text-gray-100'
                 }`}
               >
                 <p className="text-sm">{message.text}</p>
+                {message.visualization && (
+                  <div className="mt-2 text-xs text-blue-300">
+                    📊 Visualization: {message.visualization.type}
+                  </div>
+                )}
                 <p className="text-xs opacity-70 mt-1">
                   {message.timestamp.toLocaleTimeString()}
                 </p>
               </div>
             </div>
           ))}
+          
+          {isLoading && (
+            <div className="flex justify-start">
+              <div className="bg-gray-700 text-gray-100 max-w-xs px-4 py-2 rounded-lg">
+                <div className="flex items-center space-x-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-400"></div>
+                  <p className="text-sm">Gemma 3:4b is analyzing...</p>
+                </div>
+              </div>
+            </div>
+          )}
+          
           <div ref={messagesEndRef} />
         </div>
         
-        {/* Input */}
+        {/* Input area */}
         <div className="p-4 border-t border-gray-700">
           <div className="flex space-x-2">
             <input
               type="text"
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-              placeholder="Type a command..."
-              className="flex-1 bg-gray-700 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onKeyPress={handleKeyPress}
+              placeholder="Ask for data analysis or visualization..."
+              className="flex-1 bg-gray-700 text-white px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              disabled={isLoading}
             />
             <button
-              onClick={handleSendMessage}
-              className="bg-blue-600 text-white rounded-lg px-4 py-2 hover:bg-blue-700 transition-colors"
+              onClick={sendMessage}
+              disabled={isLoading || !inputText.trim()}
+              className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 px-4 py-2 rounded-lg transition-colors text-sm"
             >
               Send
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      {/* Right side - Dynamic Visualization Stage (2/3) */}
+      <div className="flex-1 bg-gradient-to-br from-gray-800 to-gray-900 flex flex-col">
+        {/* Stage header */}
+        <div className="p-4 border-b border-gray-700">
+          <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-600">
+            CelFlow AI Visualization Stage
+          </h1>
+          <p className="text-sm text-gray-400 mt-1">
+            Powered by Gemma 3:4b • Dynamic data analysis and visualization
+          </p>
+        </div>
+        
+        {/* Main visualization area */}
+        <div className="flex-1 p-6 overflow-auto" ref={visualizationRef}>
+          {currentVisualization ? (
+            renderVisualization(currentVisualization)
+          ) : (
+            <div className="h-full flex items-center justify-center">
+              <div className="text-center">
+                <div className="text-6xl mb-4">🧠</div>
+                <h2 className="text-2xl font-bold text-gray-400 mb-2">Ready for AI Analysis</h2>
+                <p className="text-gray-500 mb-6">Ask Gemma 3:4b to create visualizations, analyze data, or generate insights</p>
+                
+                <div className="grid grid-cols-2 gap-4 max-w-md mx-auto text-left">
+                  <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-600">
+                    <div className="text-blue-400 font-semibold mb-2">📊 Charts & Graphs</div>
+                    <p className="text-xs text-gray-400">Bar charts, line plots, scatter plots, histograms</p>
+                  </div>
+                  <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-600">
+                    <div className="text-green-400 font-semibold mb-2">📈 Data Analysis</div>
+                    <p className="text-xs text-gray-400">Statistical analysis, trends, correlations</p>
+                  </div>
+                  <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-600">
+                    <div className="text-purple-400 font-semibold mb-2">📋 Tables</div>
+                    <p className="text-xs text-gray-400">Data tables, summaries, reports</p>
+                  </div>
+                  <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-600">
+                    <div className="text-yellow-400 font-semibold mb-2">💻 Code Output</div>
+                    <p className="text-xs text-gray-400">Generated code, calculations, algorithms</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+        
+        {/* Stage footer with quick actions */}
+        <div className="p-4 border-t border-gray-700 bg-gray-800/50">
+          <div className="flex space-x-2 text-xs">
+            <button 
+              onClick={() => setInputText("Generate a sample chart")}
+              className="bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 px-3 py-1 rounded transition-colors"
+            >
+              📊 Sample Chart
+            </button>
+            <button 
+              onClick={() => setInputText("Create random data analysis")}
+              className="bg-green-600/20 hover:bg-green-600/40 text-green-400 px-3 py-1 rounded transition-colors"
+            >
+              📈 Random Analysis
+            </button>
+            <button 
+              onClick={() => setInputText("Show me a data table")}
+              className="bg-purple-600/20 hover:bg-purple-600/40 text-purple-400 px-3 py-1 rounded transition-colors"
+            >
+              📋 Data Table
+            </button>
+            <button 
+              onClick={() => setCurrentVisualization(null)}
+              className="bg-gray-600/20 hover:bg-gray-600/40 text-gray-400 px-3 py-1 rounded transition-colors ml-auto"
+            >
+              🗑️ Clear Stage
             </button>
           </div>
         </div>

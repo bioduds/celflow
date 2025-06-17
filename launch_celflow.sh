@@ -114,11 +114,48 @@ start_system_tray() {
 }
 
 # Function to start the main system
-start_main() {
-    echo "Starting main system..."
-    python3 backend/scripts/celflow.py > /dev/null 2>&1 &
-    echo $! > main_system.pid
-    echo "Main system started"
+start_main_system() {
+    echo "Starting CelFlow main system components..."
+    
+    # Activate virtual environment
+    if [ -d "celflow_env" ]; then
+        source celflow_env/bin/activate
+        echo "Virtual environment activated"
+    else
+        echo "Creating virtual environment..."
+        python3 -m venv celflow_env
+        source celflow_env/bin/activate
+        echo "Installing dependencies..."
+        pip install -r backend/requirements/base.txt
+    fi
+    
+    # Start AI API Server first
+    echo "Starting CelFlow AI API Server..."
+    cd backend
+    python -m app.web.ai_api_server > ../logs/ai_api_server.log 2>&1 &
+    AI_API_PID=$!
+    echo $AI_API_PID > "$SCRIPT_DIR/ai_api_server.pid"
+    cd ..
+    
+    # Wait a moment for AI API to start
+    sleep 5
+    
+    # Start main CelFlow system
+    echo "Starting main CelFlow system..."
+    python backend/scripts/run_celflow_live.py > logs/main_system.log 2>&1 &
+    MAIN_PID=$!
+    echo $MAIN_PID > "$SCRIPT_DIR/main_system.pid"
+    
+    # Start tray application  
+    echo "Starting system tray..."
+    python backend/scripts/celflow_tray.py > logs/tray.log 2>&1 &
+    TRAY_PID=$!
+    echo $TRAY_PID > "$SCRIPT_DIR/tray.pid"
+    
+    echo "✅ Main system components started"
+    echo "AI API Server PID: $AI_API_PID"
+    echo "Main System PID: $MAIN_PID"
+    echo "Tray PID: $TRAY_PID"
 }
 
 # Function to stop all components
@@ -131,16 +168,27 @@ stop_all() {
     # Stop system tray
     stop_process "system_tray.pid" "System tray"
     
+    # Stop AI API server
+    stop_process "ai_api_server.pid" "AI API Server"
+    
     # Stop main system
     stop_process "main_system.pid" "Main system"
+    
+    # Stop tray
+    stop_process "tray.pid" "System Tray"
     
     # Kill any remaining processes
     echo "Cleaning up any remaining processes..."
     pkill -f "python.*$SCRIPT_DIR"
+    pkill -f "python.*ai_api_server"
     pkill -f "tauri dev"
     pkill -f "npm run tauri"
     pkill -f "node.*tauri"
     pkill -f "CelFlow Desktop"
+    
+    # Kill processes on ports 3000 and 8000
+    lsof -ti:3000 | xargs kill -9 2>/dev/null || true
+    lsof -ti:8000 | xargs kill -9 2>/dev/null || true
     
     echo "All components stopped"
 }
@@ -160,7 +208,7 @@ start_all() {
     sleep 2
     
     # Start main system
-    start_main
+    start_main_system
     
     echo "CelFlow started"
     
