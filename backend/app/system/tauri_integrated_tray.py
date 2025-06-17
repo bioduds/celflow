@@ -6,17 +6,14 @@ Enhanced system tray that launches the beautiful Tauri desktop application
 and provides comprehensive system management capabilities.
 """
 
-import asyncio
-import json
 import logging
-import os
 import sqlite3
 import subprocess
 import threading
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 try:
     import rumps
@@ -25,17 +22,8 @@ except ImportError:
     RUMPS_AVAILABLE = False
     print("Warning: rumps not available. Install with: pip install rumps")
 
-try:
-    import tkinter as tk
-    from tkinter import scrolledtext, messagebox
-    TKINTER_AVAILABLE = True
-except ImportError:
-    TKINTER_AVAILABLE = False
-    print("Warning: tkinter not available for chat interface")
-
 from backend.app.core.agent_manager import AgentManager
-from backend.app.ai.central_brain import CentralAIBrain, create_central_brain
-from backend.app.system.macos_tray import CelFlowChatWindow
+from backend.app.ai.central_brain import create_central_brain
 
 logger = logging.getLogger(__name__)
 
@@ -47,13 +35,22 @@ class TauriDesktopLauncher:
         self.desktop_process = None
         self.is_running = False
         self.project_root = Path.cwd()
+        # Launch immediately on initialization
+        threading.Thread(target=self.launch_desktop_app, daemon=True).start()
         
     def check_tauri_requirements(self) -> Dict[str, bool]:
         """Check if Tauri requirements are met"""
         requirements = {
-            'node_modules': (self.project_root / 'frontend' / 'desktop' / 'node_modules').exists(),
-            'package_json': (self.project_root / 'frontend' / 'desktop' / 'package.json').exists(),
-            'tauri_config': (self.project_root / 'frontend' / 'desktop' / 'src-tauri' / 'tauri.conf.json').exists(),
+            'node_modules': (
+                self.project_root / 'frontend' / 'desktop' / 'node_modules'
+            ).exists(),
+            'package_json': (
+                self.project_root / 'frontend' / 'desktop' / 'package.json'
+            ).exists(),
+            'tauri_config': (
+                self.project_root / 'frontend' / 'desktop' / 'src-tauri' / 
+                'tauri.conf.json'
+            ).exists(),
             'rust_installed': self._check_rust_installed(),
             'tauri_cli': self._check_tauri_cli(),
         }
@@ -62,8 +59,12 @@ class TauriDesktopLauncher:
     def _check_rust_installed(self) -> bool:
         """Check if Rust is installed"""
         try:
-            result = subprocess.run(['rustc', '--version'], 
-                                  capture_output=True, text=True, timeout=5)
+            result = subprocess.run(
+                ['rustc', '--version'], 
+                capture_output=True, 
+                text=True, 
+                timeout=5
+            )
             return result.returncode == 0
         except (subprocess.TimeoutExpired, FileNotFoundError):
             return False
@@ -71,8 +72,12 @@ class TauriDesktopLauncher:
     def _check_tauri_cli(self) -> bool:
         """Check if Tauri CLI is installed"""
         try:
-            result = subprocess.run(['cargo', 'tauri', '--version'], 
-                                  capture_output=True, text=True, timeout=5)
+            result = subprocess.run(
+                ['cargo', 'tauri', '--version'], 
+                capture_output=True, 
+                text=True, 
+                timeout=5
+            )
             return result.returncode == 0
         except (subprocess.TimeoutExpired, FileNotFoundError):
             return False
@@ -95,10 +100,10 @@ class TauriDesktopLauncher:
             # Launch the desktop app
             logger.info("Launching Tauri desktop application...")
             
-            # Use npm run tauri:dev for development mode
+            # Use npm run tauri:dev for development mode with --no-watch to start immediately
             desktop_dir = self.project_root / 'frontend' / 'desktop'
             self.desktop_process = subprocess.Popen(
-                ['npm', 'run', 'tauri:dev'],
+                ['npm', 'run', 'tauri:dev', '--', '--no-watch'],
                 cwd=str(desktop_dir),
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
@@ -109,7 +114,10 @@ class TauriDesktopLauncher:
             logger.info(f"Desktop app launched with PID: {self.desktop_process.pid}")
             
             # Start monitoring thread
-            threading.Thread(target=self._monitor_desktop_app, daemon=True).start()
+            threading.Thread(
+                target=self._monitor_desktop_app, 
+                daemon=True
+            ).start()
             
             return True
             
@@ -183,7 +191,8 @@ class SystemMonitor:
                 # Events today
                 today = datetime.now().strftime("%Y-%m-%d")
                 cursor.execute(
-                    "SELECT COUNT(*) FROM events WHERE date(datetime(timestamp, 'unixepoch')) = ?",
+                    "SELECT COUNT(*) FROM events "
+                    "WHERE date(datetime(timestamp, 'unixepoch')) = ?",
                     (today,)
                 )
                 self.stats['events_today'] = cursor.fetchone()[0]
@@ -201,501 +210,421 @@ class SystemMonitor:
                 self.stats['uptime'] = f"{minutes}m"
                 
         except Exception as e:
-            logger.error(f"Error updating stats: {e}")
+            logger.error(f"Error updating system stats: {e}")
 
 
 class TauriIntegratedTray(rumps.App):
-    """Enhanced CelFlow tray with Tauri desktop app integration"""
+    """Enhanced system tray with Tauri desktop app integration"""
     
-    def __init__(self, agent_manager: Optional[AgentManager] = None, config: Optional[Dict[str, Any]] = None):
-        super().__init__("🧬", title="CelFlow AI")
+    def __init__(
+        self, 
+        agent_manager: Optional[AgentManager] = None, 
+        config: Optional[Dict[str, Any]] = None
+    ):
+        super().__init__("🧬", quit_button=None)
         
         self.agent_manager = agent_manager
         self.config = config or {}
         self.central_brain = None
-        
-        # Initialize components
-        self.desktop_launcher = TauriDesktopLauncher()
         self.system_monitor = SystemMonitor()
+        self.desktop_launcher = TauriDesktopLauncher()
         
-        # Setup menu
+        # Initialize menu
         self._setup_menu()
         
-        # Initialize AI brain
+        # Initialize AI brain in background
         self._initialize_ai_brain()
         
         # Start monitoring
         self._start_monitoring()
         
-        logger.info("Tauri-integrated tray initialized")
+        # Launch desktop app directly (don't wait for auto-launch)
+        self._launch_desktop_directly()
+    
+    def _launch_desktop_directly(self):
+        """Launch desktop app directly using subprocess"""
+        try:
+            logger.info("Directly launching desktop app...")
+            desktop_dir = Path.cwd() / 'frontend' / 'desktop'
+            
+            # Use a direct command to launch the desktop app
+            subprocess.Popen(
+                ['npm', 'run', 'tauri:dev', '--', '--no-watch'],
+                cwd=str(desktop_dir),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            
+            logger.info("Desktop app launch command executed")
+        except Exception as e:
+            logger.error(f"Error directly launching desktop app: {e}")
     
     def _setup_menu(self):
-        """Setup the tray menu"""
+        """Set up the menu structure"""
         self.menu = [
-            "🖥️ Launch Desktop App",
-            "💬 Chat with AI",
+            rumps.MenuItem("🖥️ Launch Desktop App", callback=self.launch_desktop_app),
             None,  # Separator
-            "📊 System Status",
-            "🤖 Agent Status", 
-            "🥚 Embryo Pool",
-            "📈 Performance",
+            rumps.MenuItem("📊 System Status", callback=self.show_system_status),
+            rumps.MenuItem("🤖 Agent Status", callback=self.show_agent_status),
+            rumps.MenuItem("🥚 Embryo Pool", callback=self.show_embryo_pool),
+            rumps.MenuItem("📈 Performance", callback=self.show_performance),
             None,  # Separator
-            "🔄 Force Agent Birth",
-            "⚙️ Settings",
-            "❓ About",
+            rumps.MenuItem("🔄 Force Agent Birth", callback=self.force_agent_birth),
+            rumps.MenuItem("⚙️ Settings", callback=self.show_settings),
+            rumps.MenuItem("❓ About", callback=self.show_about),
             None,  # Separator
-            "🔄 Restart System",
-            "🛑 Stop System",
+            rumps.MenuItem("🔄 Restart System", callback=self.restart_system),
+            rumps.MenuItem("🛑 Stop System", callback=self.stop_system)
         ]
     
     def _initialize_ai_brain(self):
-        """Initialize the Central AI Brain"""
+        """Initialize the central AI brain in a background thread"""
         def init_brain():
             try:
-                # Use the config passed to the tray, or create a default one
-                brain_config = self.config or {
-                    "model_name": "llama3.2:3b",
-                    "temperature": 0.7,
-                    "max_tokens": 1000
-                }
-                self.central_brain = create_central_brain(brain_config)
-                logger.info("Central AI Brain initialized")
+                self.central_brain = create_central_brain()
+                logger.info("Central AI brain initialized successfully")
             except Exception as e:
-                logger.error(f"Failed to initialize AI brain: {e}")
+                logger.error(f"Failed to initialize central brain: {e}")
         
+        # Start initialization in background
         threading.Thread(target=init_brain, daemon=True).start()
     
     def _start_monitoring(self):
-        """Start background monitoring"""
+        """Start system monitoring in background"""
         def monitor_loop():
             while True:
                 try:
                     self.system_monitor.update_stats()
                     self._update_title()
-                    time.sleep(30)  # Update every 30 seconds
                 except Exception as e:
-                    logger.error(f"Monitor loop error: {e}")
-                    time.sleep(60)
+                    logger.error(f"Error in monitor loop: {e}")
+                time.sleep(30)  # Update every 30 seconds
         
+        # Start monitoring in background
         threading.Thread(target=monitor_loop, daemon=True).start()
     
     def _update_title(self):
-        """Update tray title based on system status"""
-        stats = self.system_monitor.stats
-        
-        if self.desktop_launcher.is_running:
-            self.title = "🖥️"  # Desktop app running
-        elif stats['events_today'] > 100:
-            self.title = f"🧬{stats['events_today']}"  # Show event count
-        else:
-            self.title = "🧬"  # Default
+        """Update the menu bar title with current stats"""
+        try:
+            events_today = self.system_monitor.stats['events_today']
+            active_agents = self.system_monitor.stats['active_agents']
+            self.title = f"🧬 {events_today}↑ {active_agents}🤖"
+        except Exception as e:
+            logger.error(f"Error updating title: {e}")
+            self.title = "🧬"
     
     @rumps.clicked("🖥️ Launch Desktop App")
     def launch_desktop_app(self, _):
-        """Launch the beautiful Tauri desktop application"""
-        if self.desktop_launcher.is_running:
-            rumps.alert(
-                title="Desktop App Running",
-                message="The CelFlow desktop application is already running!",
-                ok="OK"
-            )
-            return
-        
-        # Check requirements
-        requirements = self.desktop_launcher.check_tauri_requirements()
-        missing = [k for k, v in requirements.items() if not v]
-        
-        if missing:
-            missing_str = "\n".join([f"• {req.replace('_', ' ').title()}" for req in missing])
-            rumps.alert(
-                title="Requirements Missing",
-                message=f"The following requirements are missing:\n\n{missing_str}\n\nPlease install them first:\n\n• npm install\n• cargo install tauri-cli@^2.0",
-                ok="OK"
-            )
-            return
-        
-        # Launch the app
-        success = self.desktop_launcher.launch_desktop_app()
-        
-        if success:
-            rumps.notification(
-                title="🖥️ Desktop App Launched",
-                subtitle="CelFlow Desktop Application",
-                message="The beautiful desktop interface is starting up...",
-                sound=True
-            )
-        else:
-            rumps.alert(
-                title="Launch Failed",
-                message="Failed to launch the desktop application. Check the logs for details.",
-                ok="OK"
-            )
-    
-    @rumps.clicked("💬 Chat with AI")
-    def open_chat(self, _):
-        """Open chat interface with Central AI Brain"""
-        if not TKINTER_AVAILABLE:
-            rumps.alert(
-                title="Chat Unavailable",
-                message="Chat interface requires tkinter. Please install it first.",
-                ok="OK"
-            )
-            return
-        
+        """Launch the Tauri desktop application"""
         try:
-            chat_window = CelFlowChatWindow(self.central_brain)
-            if chat_window.create_window():
-                chat_window.show()
+            if self.desktop_launcher.launch_desktop_app():
+                rumps.notification(
+                    title="CelFlow Desktop",
+                    subtitle="Desktop App Launched",
+                    message="The CelFlow desktop application is starting..."
+                )
             else:
-                rumps.alert(
-                    title="Chat Error",
-                    message="Failed to create chat window.",
-                    ok="OK"
+                rumps.notification(
+                    title="CelFlow Desktop",
+                    subtitle="Launch Failed",
+                    message="Failed to launch desktop app. Check requirements."
                 )
         except Exception as e:
-            logger.error(f"Error opening chat: {e}")
-            rumps.alert(
-                title="Chat Error",
-                message=f"Error opening chat: {str(e)}",
-                ok="OK"
+            logger.error(f"Error launching desktop app: {e}")
+            rumps.notification(
+                title="CelFlow Desktop",
+                subtitle="Error",
+                message=f"Error launching desktop app: {e}"
             )
     
     @rumps.clicked("📊 System Status")
     def show_system_status(self, _):
-        """Show comprehensive system status"""
-        stats = self.system_monitor.stats
-        
-        # Desktop app status
-        desktop_status = "🟢 Running" if self.desktop_launcher.is_running else "🔴 Stopped"
-        
-        # AI Brain status
-        brain_status = "🟢 Active" if self.central_brain else "🔴 Inactive"
-        
-        status_message = f"""📊 CelFlow System Status
-
-🖥️ Desktop App: {desktop_status}
-🧠 AI Brain: {brain_status}
-📊 Events Today: {stats['events_today']:,}
-📈 Total Events: {stats['total_events']:,}
-🤖 Active Agents: {stats['active_agents']}
-💾 Database Size: {stats['db_size']}
-⏱️ Uptime: {stats['uptime']}
-🏥 Health: {stats['system_health']}
-
-💡 Tip: Launch the desktop app for beautiful visualizations!"""
-        
-        rumps.alert(
-            title="System Status",
-            message=status_message,
-            ok="OK"
-        )
+        """Show system status window"""
+        try:
+            stats = self.system_monitor.stats
+            window = rumps.Window(
+                title="CelFlow System Status",
+                message=(
+                    f"Events Today: {stats['events_today']}\n"
+                    f"Total Events: {stats['total_events']}\n"
+                    f"Active Agents: {stats['active_agents']}\n"
+                    f"System Health: {stats['system_health']}\n"
+                    f"Database Size: {stats['db_size']}\n"
+                    f"Uptime: {stats['uptime']}"
+                ),
+                dimensions=(300, 200)
+            )
+            window.run()
+        except Exception as e:
+            logger.error(f"Error showing system status: {e}")
     
     @rumps.clicked("🤖 Agent Status")
     def show_agent_status(self, _):
-        """Show agent status information"""
-        if self.agent_manager:
-            try:
-                agents = self.agent_manager.get_all_agents()
-                if agents:
-                    agent_list = []
-                    for agent in agents[:5]:  # Show first 5 agents
-                        status = "🟢 Active" if agent.get('active', False) else "🔴 Inactive"
-                        agent_list.append(f"• {agent.get('name', 'Unknown')} - {status}")
-                    
-                    agent_message = f"""🤖 Agent Status
-
-Active Agents: {len([a for a in agents if a.get('active', False)])}
-Total Agents: {len(agents)}
-
-{chr(10).join(agent_list)}
-
-🖥️ Launch the desktop app for detailed agent analytics!"""
-                else:
-                    agent_message = """🤖 Agent Status
-
-No agents have been born yet.
-
-The system is still learning your patterns.
-Agents will be created automatically as patterns emerge.
-
-🖥️ Launch the desktop app to see the full agent architecture!"""
+        """Show agent status window"""
+        try:
+            if not self.agent_manager:
+                rumps.notification(
+                    title="CelFlow",
+                    subtitle="Agent Status",
+                    message="Agent manager not initialized"
+                )
+                return
                 
-                rumps.alert(
-                    title="Agent Status",
-                    message=agent_message,
-                    ok="OK"
-                )
-            except Exception as e:
-                logger.error(f"Error getting agent status: {e}")
-                rumps.alert(
-                    title="Agent Status Error",
-                    message=f"Error retrieving agent status: {str(e)}",
-                    ok="OK"
-                )
-        else:
-            rumps.alert(
-                title="Agent Status",
-                message="Agent manager not available. Please restart the system.",
-                ok="OK"
+            agents = self.agent_manager.list_agents()
+            if not agents:
+                message = "No active agents found"
+            else:
+                message = "Active Agents:\n\n"
+                for agent in agents:
+                    message += (
+                        f"Agent: {agent.name}\n"
+                        f"Type: {agent.agent_type}\n"
+                        f"Status: {agent.status}\n"
+                        f"Events Handled: {agent.events_handled}\n"
+                        f"Success Rate: {agent.success_rate:.2f}%\n\n"
+                    )
+            
+            window = rumps.Window(
+                title="CelFlow Agent Status",
+                message=message,
+                dimensions=(400, 300)
             )
+            window.run()
+        except Exception as e:
+            logger.error(f"Error showing agent status: {e}")
     
     @rumps.clicked("🥚 Embryo Pool")
     def show_embryo_pool(self, _):
-        """Show embryo development status"""
-        embryo_message = """🥚 Embryo Development Pool
-
-The system is continuously analyzing your behavior patterns
-to develop specialized AI agents.
-
-Current Development:
-• Pattern Analysis: Ongoing
-• Behavior Clustering: Active
-• Agent Specialization: In Progress
-
-🖥️ Launch the desktop app to see:
-• Real-time clustering results
-• Pattern evolution timeline
-• Agent development progress
-• Confidence metrics
-
-Embryos mature into agents automatically when ready!"""
-        
-        rumps.alert(
-            title="Embryo Pool",
-            message=embryo_message,
-            ok="OK"
-        )
+        """Show embryo pool status"""
+        try:
+            if not self.agent_manager:
+                rumps.notification(
+                    title="CelFlow",
+                    subtitle="Embryo Pool",
+                    message="Agent manager not initialized"
+                )
+                return
+                
+            embryos = self.agent_manager.list_embryos()
+            message = f"Embryos in Pool: {len(embryos)}\n\n"
+            
+            for embryo in embryos:
+                message += (
+                    f"Type: {embryo.embryo_type}\n"
+                    f"Fitness: {embryo.fitness_score:.2f}\n"
+                    f"Age: {embryo.age} cycles\n\n"
+                )
+            
+            window = rumps.Window(
+                title="CelFlow Embryo Pool",
+                message=message,
+                dimensions=(300, 200)
+            )
+            window.run()
+        except Exception as e:
+            logger.error(f"Error showing embryo pool: {e}")
     
     @rumps.clicked("📈 Performance")
     def show_performance(self, _):
-        """Show system performance metrics"""
-        stats = self.system_monitor.stats
-        
-        # Calculate performance indicators
-        events_per_hour = stats['events_today'] / max(1, datetime.now().hour or 1)
-        
-        performance_message = f"""📈 System Performance
-
-📊 Processing Rate: {events_per_hour:.1f} events/hour
-💾 Database Size: {stats['db_size']}
-⏱️ System Uptime: {stats['uptime']}
-🏥 Health Status: {stats['system_health']}
-
-🖥️ Desktop App: {'🟢 Running' if self.desktop_launcher.is_running else '🔴 Stopped'}
-
-💡 The desktop app provides detailed performance analytics
-with beautiful charts and real-time monitoring!"""
-        
-        rumps.alert(
-            title="Performance Metrics",
-            message=performance_message,
-            ok="OK"
-        )
+        """Show performance metrics"""
+        try:
+            stats = self.system_monitor.stats
+            message = (
+                f"System Performance:\n\n"
+                f"Events/Hour: {stats.get('events_per_hour', 0)}\n"
+                f"CPU Usage: {stats.get('cpu_usage', 0):.1f}%\n"
+                f"Memory Usage: {stats.get('memory_usage', 0):.1f} MB\n"
+                f"Database Size: {stats['db_size']}\n"
+                f"Active Agents: {stats['active_agents']}"
+            )
+            
+            window = rumps.Window(
+                title="CelFlow Performance",
+                message=message,
+                dimensions=(300, 200)
+            )
+            window.run()
+        except Exception as e:
+            logger.error(f"Error showing performance: {e}")
     
     @rumps.clicked("🔄 Force Agent Birth")
     def force_agent_birth(self, _):
-        """Force creation of a new agent"""
-        if self.agent_manager:
-            try:
-                # This would trigger agent creation logic
+        """Force the birth of a new agent"""
+        try:
+            if not self.agent_manager:
                 rumps.notification(
-                    title="🤖 Agent Birth Triggered",
-                    subtitle="CelFlow AI System",
-                    message="Attempting to birth a new specialized agent...",
-                    sound=True
+                    title="CelFlow",
+                    subtitle="Agent Birth",
+                    message="Agent manager not initialized"
                 )
+                return
                 
-                # In a real implementation, this would call agent_manager.force_birth()
-                # For now, just show a message
-                rumps.alert(
-                    title="Agent Birth",
-                    message="Agent birth process initiated!\n\nCheck the desktop app for real-time progress and detailed agent analytics.",
-                    ok="OK"
+            # Attempt to birth a new agent
+            success = self.agent_manager.force_birth()
+            
+            if success:
+                rumps.notification(
+                    title="CelFlow",
+                    subtitle="Agent Birth",
+                    message="New agent successfully birthed!"
                 )
-            except Exception as e:
-                logger.error(f"Error forcing agent birth: {e}")
-                rumps.alert(
-                    title="Birth Error",
-                    message=f"Error triggering agent birth: {str(e)}",
-                    ok="OK"
+            else:
+                rumps.notification(
+                    title="CelFlow",
+                    subtitle="Agent Birth Failed",
+                    message="Failed to birth new agent"
                 )
-        else:
-            rumps.alert(
-                title="Agent Birth",
-                message="Agent manager not available. Please restart the system.",
-                ok="OK"
-            )
+        except Exception as e:
+            logger.error(f"Error forcing agent birth: {e}")
     
     @rumps.clicked("⚙️ Settings")
     def show_settings(self, _):
-        """Show settings and configuration options"""
-        settings_message = """⚙️ CelFlow Settings
-
-🖥️ Desktop App Settings:
-• Launch desktop app for full configuration
-• Beautiful settings interface available
-• Real-time configuration updates
-
-📊 Current Configuration:
-• Privacy Mode: Enabled
-• Local Processing: Active
-• Auto Agent Birth: Enabled
-
-🔧 Advanced Settings:
-Available in the desktop application with
-intuitive controls and live previews.
-
-💡 Launch the desktop app for the complete
-settings experience!"""
-        
-        rumps.alert(
-            title="Settings",
-            message=settings_message,
-            ok="OK"
-        )
+        """Show settings window"""
+        try:
+            message = (
+                "CelFlow Settings\n\n"
+                "Current Configuration:\n"
+                f"Max Agents: {self.config.get('max_agents', 5)}\n"
+                f"Birth Rate: {self.config.get('birth_rate', 0.1):.2f}\n"
+                f"Learning Rate: {self.config.get('learning_rate', 0.01):.3f}\n"
+                f"Auto-Evolution: {'Enabled' if self.config.get('auto_evolution', True) else 'Disabled'}"
+            )
+            
+            window = rumps.Window(
+                title="CelFlow Settings",
+                message=message,
+                dimensions=(300, 200)
+            )
+            window.run()
+        except Exception as e:
+            logger.error(f"Error showing settings: {e}")
     
     @rumps.clicked("❓ About")
     def show_about(self, _):
-        """Show about information"""
-        about_message = """❓ About CelFlow
-
-🧬 CelFlow - Self-Creating AI Operating System
-The first AI system that creates specialized agents
-from your behavior patterns.
-
-🖥️ Now featuring a beautiful Tauri desktop application
-with professional data visualization and real-time analytics!
-
-✨ Key Features:
-• Advanced ML pipeline with Pydantic models
-• Real-time clustering and pattern detection
-• Beautiful glass morphism UI design
-• Type-safe React ↔ Rust ↔ Python integration
-• 5-12MB footprint vs 150MB+ alternatives
-
-🚀 Launch the desktop app to experience:
-• Interactive system overview
-• Clustering results visualization
-• Pattern evolution timeline
-• AI-powered recommendations
-
-Built with ❤️ for the future of human-AI collaboration"""
-        
-        rumps.alert(
-            title="About CelFlow",
-            message=about_message,
-            ok="OK"
-        )
+        """Show about window"""
+        try:
+            message = (
+                "CelFlow - Self-Creating AI Operating System\n\n"
+                "Version: 0.1.0\n"
+                "Status: Development\n\n"
+                "A revolutionary AI system that:\n"
+                "• Creates specialized AI agents\n"
+                "• Evolves through continuous learning\n"
+                "• Adapts to your workflow patterns\n"
+                "• Operates with complete privacy\n\n"
+                "© 2024 CelFlow"
+            )
+            
+            window = rumps.Window(
+                title="About CelFlow",
+                message=message,
+                dimensions=(400, 300)
+            )
+            window.run()
+        except Exception as e:
+            logger.error(f"Error showing about: {e}")
     
     @rumps.clicked("🔄 Restart System")
     def restart_system(self, _):
-        """Restart the CelFlow system"""
-        response = rumps.alert(
-            title="Restart System",
-            message="This will restart the entire CelFlow system.\n\nContinue?",
-            ok="Restart",
-            cancel="Cancel"
-        )
-        
-        if response == 1:  # OK/Restart clicked
-            try:
-                # Stop desktop app if running
-                if self.desktop_launcher.is_running:
-                    self.desktop_launcher.stop_desktop_app()
+        """Restart the entire CelFlow system"""
+        try:
+            # Confirm restart
+            window = rumps.Window(
+                title="Restart CelFlow?",
+                message="This will restart all CelFlow components.\nAre you sure?",
+                dimensions=(300, 100),
+                ok="Restart",
+                cancel="Cancel"
+            )
+            
+            if not window.run().clicked:
+                return
                 
+            # Stop desktop app if running
+            self.desktop_launcher.stop_desktop_app()
+            
+            # Use the launch script to restart
+            script_path = Path("launch_celflow.sh")
+            if script_path.exists():
+                subprocess.run(["./launch_celflow.sh", "restart"])
+            else:
+                logger.error("Launch script not found")
                 rumps.notification(
-                    title="🔄 System Restarting",
-                    subtitle="CelFlow AI System",
-                    message="Restarting all components...",
-                    sound=True
+                    title="CelFlow",
+                    subtitle="Restart Failed",
+                    message="Launch script not found"
                 )
-                
-                # Use the launch script to restart
-                subprocess.Popen(['./launch_celflow.sh', 'restart'])
-                
-                # Quit this tray instance
-                rumps.quit_application()
-                
-            except Exception as e:
-                logger.error(f"Error restarting system: {e}")
-                rumps.alert(
-                    title="Restart Error",
-                    message=f"Error restarting system: {str(e)}",
-                    ok="OK"
-                )
+        except Exception as e:
+            logger.error(f"Error restarting system: {e}")
     
     @rumps.clicked("🛑 Stop System")
     def stop_system(self, _):
         """Stop the CelFlow system"""
-        response = rumps.alert(
-            title="Stop System",
-            message="This will stop the entire CelFlow system.\n\nContinue?",
-            ok="Stop",
-            cancel="Cancel"
-        )
-        
-        if response == 1:  # OK/Stop clicked
-            try:
-                # Stop desktop app if running
-                if self.desktop_launcher.is_running:
-                    self.desktop_launcher.stop_desktop_app()
-                
+        try:
+            # Confirm stop
+            window = rumps.Window(
+                title="Stop CelFlow?",
+                message="This will stop all CelFlow components.\nAre you sure?",
+                dimensions=(300, 100),
+                ok="Stop",
+                cancel="Cancel"
+            )
+            
+            if not window.run().clicked:
+                return
+            
+            # Stop desktop app if running
+            self.desktop_launcher.stop_desktop_app()
+            
+            # Use the launch script to stop
+            script_path = Path("launch_celflow.sh")
+            if script_path.exists():
+                subprocess.run(["./launch_celflow.sh", "stop"])
+            else:
+                logger.error("Launch script not found")
                 rumps.notification(
-                    title="🛑 System Stopping",
-                    subtitle="CelFlow AI System", 
-                    message="Shutting down all components...",
-                    sound=True
+                    title="CelFlow",
+                    subtitle="Stop Failed",
+                    message="Launch script not found"
                 )
-                
-                # Use the launch script to stop
-                subprocess.Popen(['./launch_celflow.sh', 'stop'])
-                
-                # Quit this tray instance
-                rumps.quit_application()
-                
-            except Exception as e:
-                logger.error(f"Error stopping system: {e}")
-                rumps.alert(
-                    title="Stop Error",
-                    message=f"Error stopping system: {str(e)}",
-                    ok="OK"
-                )
+            
+            # Quit the tray app
+            rumps.quit_application()
+        except Exception as e:
+            logger.error(f"Error stopping system: {e}")
 
 
 def create_tauri_integrated_tray(
     agent_manager: Optional[AgentManager] = None, 
     config: Optional[Dict[str, Any]] = None
 ) -> Optional[TauriIntegratedTray]:
-    """Create and return the Tauri-integrated tray application"""
+    """Create and configure the Tauri-integrated system tray"""
     
     if not RUMPS_AVAILABLE:
-        logger.error("rumps not available - cannot create tray app")
+        logger.error("Cannot create tray - rumps not available")
         return None
-    
+        
     try:
-        tray_app = TauriIntegratedTray(agent_manager, config)
-        logger.info("Tauri-integrated tray app created successfully")
-        return tray_app
+        tray = TauriIntegratedTray(agent_manager, config)
+        logger.info("Tauri-integrated tray created successfully")
+        return tray
     except Exception as e:
-        logger.error(f"Failed to create tray app: {e}")
+        logger.error(f"Failed to create Tauri-integrated tray: {e}")
         return None
 
 
 def main():
-    """Main entry point for standalone tray execution"""
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
-    
-    logger.info("Starting Tauri-integrated CelFlow tray...")
-    
-    tray_app = create_tauri_integrated_tray()
-    if tray_app:
-        logger.info("Running tray application...")
-        tray_app.run()
+    """Main entry point"""
+    if not RUMPS_AVAILABLE:
+        print("Error: rumps not available. Install with: pip install rumps")
+        return
+        
+    tray = create_tauri_integrated_tray()
+    if tray:
+        tray.run()
     else:
-        logger.error("Failed to create tray application")
+        print("Error: Failed to create tray application")
 
 
 if __name__ == "__main__":

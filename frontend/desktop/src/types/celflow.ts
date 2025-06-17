@@ -15,18 +15,23 @@ export enum EventType {
 }
 
 export interface TimePattern {
-  peak_hour?: number;
-  peak_day?: string;
-  activity_spread: Record<string, number>;
+  peak_hour: number;
+  peak_day: string;
+  activity_spread: {
+    [key: string]: number;
+  };
 }
 
 export interface ClusterAnalysis {
   size: number;
   percentage: number;
-  event_types: Record<string, number>;
-  top_sources: Record<string, number>;
+  event_types: {
+    [key: string]: number;
+  };
+  top_sources: {
+    [key: string]: number;
+  };
   time_pattern: TimePattern;
-  dominant_pattern: string;
 }
 
 export interface AlgorithmParams {
@@ -44,11 +49,13 @@ export interface ClusteringResult {
   n_clusters: number;
   silhouette_score: number;
   calinski_harabasz_score: number;
-  algorithm_params: AlgorithmParams;
+  algorithm_params: {
+    [key: string]: any;
+  };
   description: string;
-  cluster_analysis: Record<string, ClusterAnalysis>;
-  labels: number[];
-  error?: string;
+  cluster_analysis: {
+    [key: string]: ClusterAnalysis;
+  };
 }
 
 export interface DataSummary {
@@ -78,12 +85,20 @@ export interface Recommendation {
 export interface AnalysisResults {
   timestamp: string;
   analysis_id: string;
-  data_summary: DataSummary;
-  clustering_results: Record<ClusteringAlgorithm, ClusteringResult>;
-  consensus: ConsensusResults;
-  recommendations: Recommendation[];
-  analysis_duration_seconds?: number;
-  error?: string;
+  data_summary: {
+    total_events: number;
+    event_types: {
+      [key: string]: number;
+    };
+    time_range: {
+      start: string;
+      end: string;
+    };
+    data_quality_score: number;
+  };
+  clustering_results: {
+    [key in ClusteringAlgorithm]?: ClusteringResult;
+  };
 }
 
 export interface AnalysisConfig {
@@ -97,12 +112,25 @@ export interface AnalysisConfig {
 
 // UI-specific types
 export interface SystemMetrics {
-  events_today: number;
-  active_agents: number;
-  clustering_status: string;
+  timestamp: string;
+  cpu_usage: number;
   memory_usage: number;
-  cpu_usage?: number;
-  last_analysis?: string;
+  disk_usage: {
+    total: number;
+    used: number;
+    free: number;
+  };
+  network: {
+    bytes_sent: number;
+    bytes_received: number;
+    connections: number;
+  };
+  process_stats: {
+    total_processes: number;
+    active_agents: number;
+    embryos: number;
+  };
+  events_per_second: number;
 }
 
 export interface ChartDataPoint {
@@ -116,4 +144,63 @@ export interface PatternEvolutionPoint {
   pattern_count: number;
   confidence: number;
   algorithm: ClusteringAlgorithm;
+}
+
+export interface DashboardProps {
+  analysisData: AnalysisResults;
+  systemMetrics: SystemMetrics;
+}
+
+export interface SystemOverviewProps {
+  metrics: SystemMetrics;
+}
+
+export interface ClusteringResultsProps {
+  results: {
+    [key in ClusteringAlgorithm]?: ClusteringResult;
+  };
+}
+
+export interface PatternEvolutionProps {
+  data: DataSummary;
+}
+
+export interface RecommendationsPanelProps {
+  metrics: SystemMetrics;
+}
+
+// Chat-related types
+export interface Message {
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+  agent_name?: string;
+  specialization?: string;
+  confidence?: number;
+  suggested_actions?: string[];
+}
+
+export interface ChatResponse {
+  session_id: string;
+  response: {
+    content: string;
+    agent_name: string;
+    specialization: string;
+    confidence: number;
+    suggested_actions: string[];
+  };
+  error?: string;
+}
+
+export interface ChatProps {
+  className?: string;
+}
+
+export interface ChatSession {
+  session_id: string;
+  start_time: number;
+  duration: number;
+  message_count: number;
+  active_agents: string[];
+  messages: Message[];
 } 

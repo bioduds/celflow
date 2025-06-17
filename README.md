@@ -1,6 +1,104 @@
-# CelFlow - Celular Flow AI
+# CelFlow - Self-Creating AI Operating System
 
-CelFlow is an innovative AI system that learns your digital patterns and evolves specialized agents to enhance your computing experience. It operates silently in the background, observing your interactions and gradually developing intelligent assistants tailored to your unique workflow.
+CelFlow is a revolutionary AI system that creates specialized agents based on your behavior patterns. It features a beautiful Tauri desktop application with real-time analytics and an integrated chat interface.
+
+## Features
+
+- **Intelligent Agent Creation**: Automatically creates specialized AI agents based on your workflow patterns
+- **Beautiful Desktop Interface**: Modern Tauri app with real-time analytics and integrated chat
+- **Pattern Evolution**: Continuously learns and adapts to your behavior
+- **Complete Privacy**: All processing happens locally on your machine
+- **Lightweight**: 5-12MB footprint vs 150MB+ alternatives
+
+## Installation
+
+1. Clone the repository:
+```bash
+git clone https://github.com/celflow/celflow.git
+cd celflow
+```
+
+2. Install dependencies:
+```bash
+# Python dependencies
+python3 -m venv celflow_env
+source celflow_env/bin/activate
+pip install -r backend/requirements/base.txt
+
+# Frontend dependencies
+cd frontend/desktop
+npm install
+```
+
+3. Install Tauri requirements:
+- Node.js and npm
+- Rust and Cargo
+- Tauri CLI (`cargo install tauri-cli`)
+
+## Usage
+
+1. Start CelFlow:
+```bash
+./launch_celflow.sh start
+```
+
+2. The Tauri desktop app will launch automatically, providing:
+- Real-time system analytics
+- Pattern evolution visualization
+- Integrated chat interface
+- Agent management
+- System configuration
+
+3. Stop CelFlow:
+```bash
+./launch_celflow.sh stop
+```
+
+## Architecture
+
+CelFlow consists of several key components:
+
+1. **Main System**: Core Python backend that handles:
+   - Event capture and processing
+   - Pattern detection and analysis
+   - Agent creation and management
+
+2. **Desktop App**: Beautiful Tauri interface featuring:
+   - Real-time analytics dashboard
+   - Integrated chat interface
+   - Pattern visualization
+   - System configuration
+   - Agent management
+
+3. **AI Components**:
+   - Central AI Brain for coordinating agents
+   - Pattern detection system
+   - Agent specialization logic
+   - Embryo development pool
+
+## Development
+
+1. Start in development mode:
+```bash
+./launch_celflow.sh start
+```
+
+2. The system will:
+- Launch the main Python backend
+- Start the Tauri desktop app in dev mode
+- Enable hot reloading for frontend changes
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
+
+## License
+
+Copyright © 2024 CelFlow. All rights reserved.
 
 ## 🧬 What is CelFlow?
 
