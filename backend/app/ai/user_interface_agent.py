@@ -464,26 +464,27 @@ Respond helpfully and naturally to the user's message."""
     async def _check_needs_code_execution(self, message: str) -> bool:
         """Check if the user request requires code execution"""
         
-        # Keywords that suggest code execution might be needed
+        # Keywords that strongly suggest code execution is needed
         code_keywords = [
-            "calculate", "compute", "algorithm", "prime numbers", "fibonacci",
+            "calculate", "compute", "algorithm", "prime number", "fibonacci",
             "factorial", "sort", "analyze data", "process", "transform",
-            "generate", "create visualization", "plot", "graph", "statistics",
-            "machine learning", "predict", "classify", "cluster"
+            "generate", "create", "plot", "graph", "statistics",
+            "hash function", "implement", "code", "function"
         ]
         
         message_lower = message.lower()
         
-        # Check for explicit code execution keywords
+        # Direct check for code execution keywords
         for keyword in code_keywords:
             if keyword in message_lower:
-                # Use AI to decide if code is really needed
-                decision = await self.central_brain.decide_code_execution(
-                    message,
-                    ["chat", "visualization", "file_analysis", "system_monitoring"]
-                )
-                # Parse the AI's decision (this is simplified - in production would be more robust)
-                return "use_code: true" in decision.get("decision", "").lower()
+                # If we find a keyword AND the message mentions visualization/chart/plot,
+                # we definitely need code execution
+                if any(viz_word in message_lower for viz_word in ["chart", "plot", "graph", "visualiz", "show"]):
+                    logger.info(f"Code execution needed: found '{keyword}' with visualization request")
+                    return True
+                # Even without visualization, these keywords strongly suggest code execution
+                logger.info(f"Code execution needed: found keyword '{keyword}'")
+                return True
         
         return False
     
