@@ -66,6 +66,7 @@ Respond helpfully and naturally to the user's message."""
 
             # First, check if this request needs code execution
             needs_code = await self._check_needs_code_execution(message)
+            logger.info(f"Code execution check for message '{message}': {needs_code}")
             
             if needs_code:
                 # Handle code execution request
@@ -464,6 +465,13 @@ Respond helpfully and naturally to the user's message."""
     async def _check_needs_code_execution(self, message: str) -> bool:
         """Check if the user request requires code execution"""
         
+        message_lower = message.lower()
+        
+        # Super direct check - if they say "calculate" and "prime", that's code execution
+        if "calculate" in message_lower and "prime" in message_lower:
+            logger.info("Code execution DEFINITELY needed: calculate + prime")
+            return True
+            
         # Keywords that strongly suggest code execution is needed
         code_keywords = [
             "calculate", "compute", "algorithm", "prime number", "fibonacci",
@@ -471,8 +479,6 @@ Respond helpfully and naturally to the user's message."""
             "generate", "create", "plot", "graph", "statistics",
             "hash function", "implement", "code", "function"
         ]
-        
-        message_lower = message.lower()
         
         # Direct check for code execution keywords
         for keyword in code_keywords:
@@ -486,6 +492,7 @@ Respond helpfully and naturally to the user's message."""
                 logger.info(f"Code execution needed: found keyword '{keyword}'")
                 return True
         
+        logger.info(f"No code execution keywords found in: {message}")
         return False
     
     async def _handle_code_execution_request(self, message: str, context: Dict[str, Any]) -> Dict[str, Any]:
