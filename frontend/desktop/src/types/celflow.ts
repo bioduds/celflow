@@ -32,6 +32,7 @@ export interface ClusterAnalysis {
     [key: string]: number;
   };
   time_pattern: TimePattern;
+  dominant_pattern?: string;
 }
 
 export interface AlgorithmParams {
@@ -162,11 +163,12 @@ export interface ClusteringResultsProps {
 }
 
 export interface PatternEvolutionProps {
-  data: DataSummary;
+  analysisData: AnalysisResults | null;
 }
 
 export interface RecommendationsPanelProps {
-  metrics: SystemMetrics;
+  recommendations: Recommendation[];
+  analysisId: string;
 }
 
 // Chat-related types

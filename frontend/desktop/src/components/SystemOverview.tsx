@@ -22,7 +22,7 @@ const SystemOverview: React.FC<SystemOverviewProps> = ({ metrics }) => {
         System Overview
       </h2>
 
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Resource Usage */}
         <div>
           <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-4">
@@ -50,13 +50,13 @@ const SystemOverview: React.FC<SystemOverviewProps> = ({ metrics }) => {
                   style={{ width: `${metrics.cpu_usage}%` }}
                 />
               </div>
-            </div>
+          </div>
 
             {/* Memory Usage */}
             <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
               <div className="text-sm text-gray-500 dark:text-gray-400">
                 Memory Usage
-              </div>
+                </div>
               <div className="mt-2">
                 <span className="text-2xl font-semibold text-gray-800 dark:text-white">
                   {formatBytes(metrics.memory_usage)}
@@ -80,12 +80,12 @@ const SystemOverview: React.FC<SystemOverviewProps> = ({ metrics }) => {
                 <span className="text-2xl font-semibold text-gray-800 dark:text-white">
                   {formatBytes(metrics.network.bytes_sent)}
                 </span>
-              </div>
-            </div>
+          </div>
+                </div>
             <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
               <div className="text-sm text-gray-500 dark:text-gray-400">
                 Data Received
-              </div>
+                </div>
               <div className="mt-2">
                 <span className="text-2xl font-semibold text-gray-800 dark:text-white">
                   {formatBytes(metrics.network.bytes_received)}
@@ -104,7 +104,7 @@ const SystemOverview: React.FC<SystemOverviewProps> = ({ metrics }) => {
             <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
               <div className="text-sm text-gray-500 dark:text-gray-400">
                 Active Agents
-              </div>
+      </div>
               <div className="mt-2">
                 <span className="text-2xl font-semibold text-gray-800 dark:text-white">
                   {metrics.process_stats.active_agents}
@@ -137,7 +137,7 @@ const SystemOverview: React.FC<SystemOverviewProps> = ({ metrics }) => {
         {/* Last Update */}
         <div className="text-sm text-gray-500 dark:text-gray-400">
           Last Update: {new Date(metrics.timestamp).toLocaleString()}
-        </div>
+      </div>
       </div>
     </div>
   );

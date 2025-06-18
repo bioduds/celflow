@@ -41,6 +41,50 @@ stop_process() {
     fi
 }
 
+# Function to check and start Ollama
+check_start_ollama() {
+    echo "Checking Ollama service..."
+    
+    # Check if Ollama is installed
+    if ! command -v ollama &> /dev/null; then
+        echo "❌ Ollama is not installed. Please install it first:"
+        echo "   Visit: https://ollama.ai"
+        return 1
+    fi
+    
+    # Check if Ollama service is running
+    if ! curl -s http://localhost:11434/api/tags &> /dev/null; then
+        echo "Starting Ollama service..."
+        ollama serve > /dev/null 2>&1 &
+        echo $! > "$SCRIPT_DIR/ollama.pid"
+        
+        # Wait for Ollama to start
+        echo "Waiting for Ollama to initialize..."
+        sleep 5
+        
+        # Check if it's running now
+        if ! curl -s http://localhost:11434/api/tags &> /dev/null; then
+            echo "❌ Failed to start Ollama service"
+            return 1
+        fi
+    fi
+    
+    echo "✅ Ollama service is running"
+    
+    # Check if Gemma 3:4b model is available
+    if ! ollama list | grep -q "gemma3:4b"; then
+        echo "📥 Downloading Gemma 3:4b model (this may take a while)..."
+        ollama pull gemma3:4b
+        if [ $? -ne 0 ]; then
+            echo "❌ Failed to download Gemma 3:4b model"
+            return 1
+        fi
+    fi
+    
+    echo "✅ Gemma 3:4b model is ready"
+    return 0
+}
+
 # Function to check Tauri dependencies
 check_tauri_deps() {
     # Check Node.js
@@ -177,6 +221,9 @@ stop_all() {
     # Stop tray
     stop_process "tray.pid" "System Tray"
     
+    # Stop Ollama service
+    stop_process "ollama.pid" "Ollama service"
+    
     # Kill any remaining processes
     echo "Cleaning up any remaining processes..."
     pkill -f "python.*$SCRIPT_DIR"
@@ -185,10 +232,12 @@ stop_all() {
     pkill -f "npm run tauri"
     pkill -f "node.*tauri"
     pkill -f "CelFlow Desktop"
+    pkill -f "ollama serve"
     
-    # Kill processes on ports 3000 and 8000
+    # Kill processes on ports 3000, 8000, and 11434
     lsof -ti:3000 | xargs kill -9 2>/dev/null || true
     lsof -ti:8000 | xargs kill -9 2>/dev/null || true
+    lsof -ti:11434 | xargs kill -9 2>/dev/null || true
     
     echo "All components stopped"
 }
@@ -197,7 +246,14 @@ stop_all() {
 start_all() {
     echo "Starting CelFlow..."
     
-    # Start Tauri tray first
+    # Start Ollama service first (required for AI)
+    if ! check_start_ollama; then
+        echo "❌ Failed to start Ollama. CelFlow AI features will not work."
+        echo "Please install Ollama from https://ollama.ai and try again."
+        return 1
+    fi
+    
+    # Start Tauri tray
     start_tauri_tray
     
     # Start system tray icon
@@ -214,7 +270,7 @@ start_all() {
     
     # Show running processes
     echo -e "\nRunning processes:"
-    ps aux | grep -E "python.*$SCRIPT_DIR|tauri" | grep -v grep
+    ps aux | grep -E "python.*$SCRIPT_DIR|tauri|ollama" | grep -v grep
 }
 
 # Function to restart the system

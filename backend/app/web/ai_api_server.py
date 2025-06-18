@@ -12,7 +12,7 @@ from datetime import datetime
 from typing import Dict, Any, List, Optional
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
@@ -22,6 +22,8 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from app.ai.central_brain import CentralAIBrain, create_central_brain
 from app.core.central_integration import CentralIntegration
+from app.core.conversation_memory import conversation_memory
+from app.core.multimodal_processor import multimodal_processor
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -214,38 +216,111 @@ async def health_check():
         logger.error(f"Health check failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/restart")
+async def restart_ai_system():
+    """Restart the AI system components"""
+    global central_brain, central_integration
+    
+    try:
+        logger.info("🔄 Restarting AI system...")
+        
+        # Stop existing components
+        if central_brain:
+            await central_brain.stop()
+        if central_integration:
+            await central_integration.stop()
+        
+        # Reinitialize components
+        config = load_config()
+        
+        # Recreate Central AI Brain
+        central_brain = await create_central_brain(config)
+        if not central_brain:
+            raise Exception("Failed to recreate Central AI Brain")
+        
+        # Recreate Central Integration
+        central_integration = CentralIntegration(config)
+        await central_integration.initialize()
+        
+        logger.info("✅ AI system restart completed successfully")
+        
+        return {"success": True, "message": "AI system restarted successfully"}
+        
+    except Exception as e:
+        logger.error(f"❌ AI system restart failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Restart failed: {str(e)}")
+
 @app.post("/chat", response_model=ChatResponse)
 async def chat_with_ai(message: ChatMessage):
-    """Chat with the AI system"""
+    """Chat with the AI system with conversation memory"""
     if not central_brain:
         raise HTTPException(status_code=503, detail="AI system not initialized")
     
     try:
         start_time = datetime.now()
         
+        # Get or create conversation session
+        session_id = conversation_memory.get_or_create_session()
+        
+        # Store user message
+        conversation_memory.add_message(
+            content=message.message,
+            sender="user",
+            session_id=session_id,
+            message_type="text"
+        )
+        
+        # Get conversation context for AI
+        context = conversation_memory.get_context_for_prompt(session_id, max_messages=8)
+        
+        # Enhanced prompt with conversation context
+        enhanced_message = f"{context}\n\nCurrent message: {message.message}"
+        
         # Process message through Central AI Brain
         result = await central_brain.chat_with_user_interface_agent(
-            message.message,
-            context={"session_id": message.session_id}
+            enhanced_message,
+            context={"session_id": session_id, "has_history": len(context) > 50}
         )
         
         response_time = (datetime.now() - start_time).total_seconds()
+        ai_message = result.get("message", "")
         
         # Generate visualization if requested or if message contains visualization keywords
         visualization = None
         if (message.request_visualization or 
             any(keyword in message.message.lower() for keyword in ['plot', 'chart', 'graph', 'table', 'analyze', 'show', 'visualize'])):
-            visualization = await generate_visualization(message.message, result.get("message", ""))
+            visualization = await generate_visualization(message.message, ai_message)
+        
+        # Store AI response with visualization data
+        conversation_memory.add_message(
+            content=ai_message,
+            sender="ai",
+            session_id=session_id,
+            message_type="visualization" if visualization else "text",
+            visualization_data=visualization.dict() if visualization else None,
+            response_time=response_time
+        )
+        
+        # Add context topics for better conversation tracking
+        if any(keyword in message.message.lower() for keyword in ['system', 'stats', 'dashboard']):
+            conversation_memory.add_context_topic(
+                "system_monitoring", 
+                "User interested in system statistics and performance monitoring",
+                session_id, 
+                importance=1.5
+            )
         
         if result.get("success", False):
             return ChatResponse(
                 success=True,
-                message=result.get("message", ""),
+                message=ai_message,
                 response_time=response_time,
                 interaction_id=result.get("interaction_id", 0),
                 agent_info={
                     "agent": result.get("agent", "central_brain"),
-                    "context_used": result.get("context_used", False)
+                    "context_used": True,
+                    "session_id": session_id,
+                    "conversation_length": len(conversation_memory.get_conversation_history(session_id))
                 },
                 visualization=visualization
             )
@@ -255,7 +330,7 @@ async def chat_with_ai(message: ChatMessage):
                 message=result.get("message", "Sorry, I encountered an error."),
                 response_time=response_time,
                 interaction_id=0,
-                agent_info={"agent": "error_handler"},
+                agent_info={"agent": "error_handler", "session_id": session_id},
                 visualization=visualization,
                 error=result.get("error", "Unknown error")
             )
@@ -325,32 +400,150 @@ async def generate_visualization(user_message: str, ai_response: str) -> Optiona
         # Check if user is asking for specific visualization types
         message_lower = user_message.lower()
         
-        if any(keyword in message_lower for keyword in ['chart', 'bar chart', 'pie chart']):
+        if any(keyword in message_lower for keyword in ['system', 'stats', 'statistics', 'dashboard', 'monitor', 'performance']):
             return VisualizationData(
-                type="chart",
-                title="Sample Chart",
-                data={
-                    "labels": ["A", "B", "C", "D"],
-                    "values": [10, 25, 15, 30],
-                    "chart_type": "bar"
-                },
-                config={"color_scheme": "blue"}
+                type="system_dashboard",
+                title="System Statistics Dashboard",
+                data={"dashboard_type": "system_stats"},
+                config={"real_time": True, "update_interval": 5000}
             )
         
-        elif any(keyword in message_lower for keyword in ['plot', 'line plot', 'scatter', 'sine', 'wave']):
+        elif any(keyword in message_lower for keyword in ['bar chart', 'bar']):
+            return VisualizationData(
+                type="bar",
+                title="Sample Bar Chart",
+                data={
+                    "labels": ["Q1", "Q2", "Q3", "Q4"],
+                    "datasets": [{
+                        "label": "Sales",
+                        "data": [65, 59, 80, 81],
+                        "backgroundColor": ["rgba(255, 99, 132, 0.8)", "rgba(54, 162, 235, 0.8)", 
+                                          "rgba(255, 205, 86, 0.8)", "rgba(75, 192, 192, 0.8)"],
+                        "borderColor": ["rgba(255, 99, 132, 1)", "rgba(54, 162, 235, 1)", 
+                                       "rgba(255, 205, 86, 1)", "rgba(75, 192, 192, 1)"],
+                        "borderWidth": 2
+                    }]
+                }
+            )
+        
+        elif any(keyword in message_lower for keyword in ['pie chart', 'pie', 'doughnut']):
+            chart_type = "doughnut" if "doughnut" in message_lower else "pie"
+            return VisualizationData(
+                type=chart_type,
+                title=f"Sample {chart_type.title()} Chart",
+                data={
+                    "labels": ["Desktop", "Mobile", "Tablet", "Other"],
+                    "datasets": [{
+                        "data": [45, 30, 20, 5],
+                        "backgroundColor": [
+                            "rgba(255, 99, 132, 0.8)",
+                            "rgba(54, 162, 235, 0.8)",
+                            "rgba(255, 205, 86, 0.8)",
+                            "rgba(75, 192, 192, 0.8)"
+                        ],
+                        "borderWidth": 2
+                    }]
+                }
+            )
+        
+        elif any(keyword in message_lower for keyword in ['line chart', 'line plot', 'sine', 'wave', 'trend']):
             import numpy as np
-            x = np.linspace(0, 10, 100).tolist()
-            y = np.sin(x).tolist() if 'sine' in message_lower else [i**2 for i in range(len(x))]
+            if 'sine' in message_lower or 'wave' in message_lower:
+                x = np.linspace(0, 4*np.pi, 50)
+                y = np.sin(x)
+                labels = [f"{i:.1f}" for i in x[:20]]
+                data_points = y[:20].tolist()
+            else:
+                labels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"]
+                data_points = [65, 59, 80, 81, 56, 55]
             
             return VisualizationData(
-                type="plot",
-                title="Mathematical Plot",
+                type="line",
+                title="Line Chart Visualization",
                 data={
-                    "x": x[:20],  # Limit data for demo
-                    "y": y[:20],
-                    "plot_type": "line"
-                },
-                config={"color": "green", "line_width": 2}
+                    "labels": labels,
+                    "datasets": [{
+                        "label": "Data Series",
+                        "data": data_points,
+                        "borderColor": "rgb(75, 192, 192)",
+                        "backgroundColor": "rgba(75, 192, 192, 0.2)",
+                        "tension": 0.4
+                    }]
+                }
+            )
+        
+        elif any(keyword in message_lower for keyword in ['scatter', 'scatter plot']):
+            import random
+            return VisualizationData(
+                type="scatter",
+                title="Scatter Plot Visualization",
+                data={
+                    "datasets": [{
+                        "label": "Dataset 1",
+                        "data": [{"x": random.randint(0, 100), "y": random.randint(0, 100)} for _ in range(20)],
+                        "backgroundColor": "rgba(255, 99, 132, 0.6)",
+                        "borderColor": "rgba(255, 99, 132, 1)",
+                        "pointRadius": 6
+                    }]
+                }
+            )
+        
+        elif any(keyword in message_lower for keyword in ['radar', 'radar chart']):
+            return VisualizationData(
+                type="radar",
+                title="Radar Chart Visualization",
+                data={
+                    "labels": ["Speed", "Reliability", "Comfort", "Safety", "Efficiency"],
+                    "datasets": [{
+                        "label": "Performance",
+                        "data": [80, 90, 70, 85, 75],
+                        "backgroundColor": "rgba(54, 162, 235, 0.2)",
+                        "borderColor": "rgba(54, 162, 235, 1)",
+                        "pointBackgroundColor": "rgba(54, 162, 235, 1)",
+                        "borderWidth": 2
+                    }]
+                }
+            )
+        
+        elif any(keyword in message_lower for keyword in ['network', 'graph', 'nodes', 'connections']):
+            return VisualizationData(
+                type="network",
+                title="Network Graph Visualization",
+                data={
+                    "nodes": [
+                        {"id": "Central", "group": 1},
+                        {"id": "Node 1", "group": 2},
+                        {"id": "Node 2", "group": 2},
+                        {"id": "Node 3", "group": 3},
+                        {"id": "Node 4", "group": 3},
+                        {"id": "Node 5", "group": 3}
+                    ],
+                    "links": [
+                        {"source": "Central", "target": "Node 1"},
+                        {"source": "Central", "target": "Node 2"},
+                        {"source": "Node 1", "target": "Node 3"},
+                        {"source": "Node 2", "target": "Node 4"},
+                        {"source": "Node 2", "target": "Node 5"}
+                    ]
+                }
+            )
+        
+        elif any(keyword in message_lower for keyword in ['heatmap', 'heat map']):
+            return VisualizationData(
+                type="plotly",
+                title="Heatmap Visualization",
+                data={
+                    "data": [{
+                        "z": [[1, 20, 30], [20, 1, 60], [30, 60, 1]],
+                        "type": "heatmap",
+                        "colorscale": "Viridis"
+                    }],
+                    "layout": {
+                        "title": "Sample Heatmap",
+                        "xaxis": {"title": "X Axis"},
+                        "yaxis": {"title": "Y Axis"}
+                    }
+                }
             )
         
         elif any(keyword in message_lower for keyword in ['table', 'data table', 'dataset']):
@@ -358,12 +551,12 @@ async def generate_visualization(user_message: str, ai_response: str) -> Optiona
                 type="table",
                 title="Sample Data Table",
                 data={
-                    "headers": ["Name", "Value", "Category"],
+                    "headers": ["Name", "Value", "Category", "Status"],
                     "rows": [
-                        ["Item A", 100, "Type 1"],
-                        ["Item B", 250, "Type 2"],
-                        ["Item C", 150, "Type 1"],
-                        ["Item D", 300, "Type 3"]
+                        ["Item A", 100, "Type 1", "Active"],
+                        ["Item B", 250, "Type 2", "Pending"],
+                        ["Item C", 150, "Type 1", "Active"],
+                        ["Item D", 300, "Type 3", "Completed"]
                     ]
                 }
             )
@@ -394,16 +587,20 @@ print(fib_sequence)
             )
         
         # Default visualization for general requests
-        if any(keyword in message_lower for keyword in ['show', 'display', 'visualize', 'generate']):
+        if any(keyword in message_lower for keyword in ['show', 'display', 'visualize', 'generate', 'chart']):
             return VisualizationData(
-                type="chart",
+                type="bar",
                 title="Generated Visualization",
                 data={
                     "labels": ["Data Point 1", "Data Point 2", "Data Point 3"],
-                    "values": [45, 78, 32],
-                    "chart_type": "bar"
-                },
-                config={"color_scheme": "purple"}
+                    "datasets": [{
+                        "label": "Sample Data",
+                        "data": [45, 78, 32],
+                        "backgroundColor": ["rgba(139, 69, 19, 0.8)", "rgba(75, 192, 192, 0.8)", "rgba(255, 206, 86, 0.8)"],
+                        "borderColor": ["rgba(139, 69, 19, 1)", "rgba(75, 192, 192, 1)", "rgba(255, 206, 86, 1)"],
+                        "borderWidth": 2
+                    }]
+                }
             )
         
         return None
@@ -492,6 +689,77 @@ async def websocket_chat(websocket: WebSocket):
     except WebSocketDisconnect:
         manager.disconnect(websocket)
 
+@app.get("/system-stats")
+async def get_system_statistics():
+    """Get real-time system statistics for visualization"""
+    if not central_brain:
+        raise HTTPException(status_code=503, detail="AI system not initialized")
+    
+    try:
+        import psutil
+        import time
+        from datetime import datetime, timedelta
+        
+        # Get system metrics
+        cpu_percent = psutil.cpu_percent(interval=1)
+        memory = psutil.virtual_memory()
+        disk = psutil.disk_usage('/')
+        
+        # Get AI system metrics
+        uptime = (datetime.now() - central_brain.startup_time).total_seconds() if central_brain.startup_time else 0
+        
+        # Agent status
+        agents_status = {
+            "user_interface": "active" if central_brain.user_interface else "inactive",
+            "agent_orchestrator": "active" if central_brain.agent_orchestrator else "inactive",
+            "system_controller": "active" if central_brain.system_controller else "inactive",
+            "embryo_trainer": "active" if central_brain.embryo_trainer else "inactive",
+            "pattern_validator": "active" if central_brain.pattern_validator else "inactive"
+        }
+        
+        active_agents = sum(1 for status in agents_status.values() if status == "active")
+        
+        # Response time metrics (simulated for now)
+        response_times = [0.5, 1.2, 0.8, 2.1, 1.5, 0.9, 1.8, 1.1, 0.7, 1.4]
+        avg_response_time = sum(response_times) / len(response_times)
+        
+        return {
+            "timestamp": datetime.now().isoformat(),
+            "system_metrics": {
+                "cpu_usage": round(cpu_percent, 1),
+                "memory_usage": round(memory.percent, 1),
+                "memory_total": round(memory.total / (1024**3), 2),  # GB
+                "memory_used": round(memory.used / (1024**3), 2),   # GB
+                "disk_usage": round(disk.percent, 1),
+                "disk_total": round(disk.total / (1024**3), 2),     # GB
+                "disk_used": round(disk.used / (1024**3), 2)       # GB
+            },
+            "ai_metrics": {
+                "uptime_seconds": round(uptime, 1),
+                "uptime_formatted": str(timedelta(seconds=int(uptime))),
+                "active_agents": active_agents,
+                "total_agents": len(agents_status),
+                "interaction_count": central_brain.interaction_count,
+                "avg_response_time": round(avg_response_time, 2),
+                "model_name": "gemma3:4b",
+                "ollama_status": "healthy"
+            },
+            "agents_status": agents_status,
+            "performance_history": {
+                "response_times": response_times,
+                "timestamps": [(datetime.now() - timedelta(minutes=i)).isoformat() for i in range(len(response_times)-1, -1, -1)]
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"System stats error: {e}")
+        return {
+            "timestamp": datetime.now().isoformat(),
+            "error": str(e),
+            "system_metrics": {"cpu_usage": 0, "memory_usage": 0},
+            "ai_metrics": {"active_agents": 0, "interaction_count": 0}
+        }
+
 @app.get("/agents")
 async def get_agents():
     """Get information about active agents"""
@@ -528,9 +796,161 @@ async def get_agents():
     
     return {"agents": agents, "total_agents": len(agents)}
 
+@app.get("/conversation/history")
+async def get_conversation_history(limit: int = 20):
+    """Get conversation history with memory context"""
+    try:
+        session_id = conversation_memory.current_session_id
+        if not session_id:
+            return {"success": True, "history": [], "session_info": {"error": "No active session"}}
+        
+        history = conversation_memory.get_conversation_history(session_id, limit)
+        session_info = conversation_memory.get_session_info(session_id)
+        
+        return {
+            "success": True,
+            "history": history,
+            "session_info": session_info,
+            "total_messages": len(history)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting conversation history: {e}")
+        return {"success": False, "error": str(e)}
+
+@app.post("/conversation/new-session")
+async def create_new_conversation_session():
+    """Create a new conversation session"""
+    try:
+        session_id = conversation_memory.create_session()
+        session_info = conversation_memory.get_session_info(session_id)
+        
+        return {
+            "success": True,
+            "session_id": session_id,
+            "session_info": session_info
+        }
+        
+    except Exception as e:
+        logger.error(f"Error creating new session: {e}")
+        return {"success": False, "error": str(e)}
+
+@app.post("/multimodal/upload")
+async def upload_multimodal_file(file: UploadFile = File(...)):
+    """Upload and process multimodal content (images, data, code)"""
+    try:
+        # Read file content
+        file_content = await file.read()
+        
+        # Process file through multimodal processor
+        result = await multimodal_processor.process_file(
+            file_path="", 
+            file_content=file_content, 
+            filename=file.filename
+        )
+        
+        if result.get("success"):
+            # Generate AI analysis using the processed content
+            ai_prompt = result.get("ai_prompt", "")
+            if ai_prompt and central_brain:
+                ai_response = await central_brain.chat_with_user_interface_agent(
+                    ai_prompt,
+                    context={"multimodal": True, "file_type": result.get("type")}
+                )
+                result["ai_analysis"] = ai_response.get("message", "")
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"Multimodal upload error: {e}")
+        return {"success": False, "error": str(e)}
+
+@app.post("/multimodal/screenshot")
+async def capture_and_analyze_screenshot():
+    """Capture desktop screenshot and analyze it"""
+    try:
+        # Capture screenshot
+        result = await multimodal_processor.capture_screenshot()
+        
+        if result.get("success"):
+            # Generate AI analysis
+            ai_prompt = result.get("ai_prompt", "")
+            if ai_prompt and central_brain:
+                ai_response = await central_brain.chat_with_user_interface_agent(
+                    ai_prompt,
+                    context={"multimodal": True, "screenshot": True}
+                )
+                result["ai_analysis"] = ai_response.get("message", "")
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"Screenshot capture error: {e}")
+        return {"success": False, "error": str(e)}
+
+@app.post("/multimodal/generate-diagram")
+async def generate_mermaid_diagram(request: Dict[str, Any]):
+    """Generate Mermaid diagrams"""
+    try:
+        diagram_type = request.get("type", "flowchart")
+        content = request.get("content", "")
+        
+        # Generate Mermaid syntax
+        mermaid_code = multimodal_processor.generate_mermaid_diagram(diagram_type, content)
+        
+        # Get AI to enhance the diagram
+        if central_brain:
+            ai_prompt = f"I've generated a {diagram_type} diagram. Please review and suggest improvements:\n\n{mermaid_code}"
+            ai_response = await central_brain.chat_with_user_interface_agent(
+                ai_prompt,
+                context={"multimodal": True, "diagram_generation": True}
+            )
+            
+            return {
+                "success": True,
+                "diagram_type": diagram_type,
+                "mermaid_code": mermaid_code,
+                "ai_suggestions": ai_response.get("message", ""),
+                "visualization": {
+                    "type": "mermaid",
+                    "title": f"{diagram_type.title()} Diagram",
+                    "content": mermaid_code
+                }
+            }
+        
+        return {
+            "success": True,
+            "diagram_type": diagram_type,
+            "mermaid_code": mermaid_code
+        }
+        
+    except Exception as e:
+        logger.error(f"Diagram generation error: {e}")
+        return {"success": False, "error": str(e)}
+
+@app.get("/multimodal/supported-formats")
+async def get_supported_formats():
+    """Get list of supported multimodal formats"""
+    return {
+        "success": True,
+        "supported_formats": {
+            "images": [".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".webp"],
+            "data": [".csv", ".json", ".xlsx", ".tsv"],
+            "code": [".py", ".js", ".ts", ".html", ".css", ".yaml", ".yml", ".md"],
+            "documents": [".pdf", ".txt"]
+        },
+        "capabilities": {
+            "image_analysis": "Visual content analysis, chart recognition, screenshot capture",
+            "data_processing": "CSV/JSON analysis, visualization suggestions, statistical insights",
+            "code_analysis": "Code structure analysis, documentation generation, quality metrics",
+            "document_processing": "PDF text extraction, document analysis, content summarization",
+            "diagram_generation": "Mermaid flowcharts, sequence diagrams, class diagrams"
+        }
+    }
+
 if __name__ == "__main__":
     uvicorn.run(
-        "ai_api_server:app",
+        "app.web.ai_api_server:app",
         host="127.0.0.1",
         port=8000,
         reload=True,

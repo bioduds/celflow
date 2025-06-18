@@ -319,7 +319,7 @@ class TauriIntegratedTray(rumps.App):
         """Launch the Tauri desktop application"""
         try:
             if self.desktop_launcher.launch_desktop_app():
-                rumps.notification(
+            rumps.notification(
                     title="CelFlow Desktop",
                     subtitle="Desktop App Launched",
                     message="The CelFlow desktop application is starting..."
@@ -342,7 +342,7 @@ class TauriIntegratedTray(rumps.App):
     def show_system_status(self, _):
         """Show system status window"""
         try:
-            stats = self.system_monitor.stats
+        stats = self.system_monitor.stats
             window = rumps.Window(
                 title="CelFlow System Status",
                 message=(
@@ -389,9 +389,9 @@ class TauriIntegratedTray(rumps.App):
                 title="CelFlow Agent Status",
                 message=message,
                 dimensions=(400, 300)
-            )
+                )
             window.run()
-        except Exception as e:
+            except Exception as e:
             logger.error(f"Error showing agent status: {e}")
     
     @rumps.clicked("🥚 Embryo Pool")
@@ -429,7 +429,7 @@ class TauriIntegratedTray(rumps.App):
     def show_performance(self, _):
         """Show performance metrics"""
         try:
-            stats = self.system_monitor.stats
+        stats = self.system_monitor.stats
             message = (
                 f"System Performance:\n\n"
                 f"Events/Hour: {stats.get('events_per_hour', 0)}\n"
@@ -451,7 +451,7 @@ class TauriIntegratedTray(rumps.App):
     @rumps.clicked("🔄 Force Agent Birth")
     def force_agent_birth(self, _):
         """Force the birth of a new agent"""
-        try:
+            try:
             if not self.agent_manager:
                 rumps.notification(
                     title="CelFlow",
@@ -475,8 +475,8 @@ class TauriIntegratedTray(rumps.App):
                     subtitle="Agent Birth Failed",
                     message="Failed to birth new agent"
                 )
-        except Exception as e:
-            logger.error(f"Error forcing agent birth: {e}")
+            except Exception as e:
+                logger.error(f"Error forcing agent birth: {e}")
     
     @rumps.clicked("⚙️ Settings")
     def show_settings(self, _):
@@ -517,10 +517,10 @@ class TauriIntegratedTray(rumps.App):
             )
             
             window = rumps.Window(
-                title="About CelFlow",
+            title="About CelFlow",
                 message=message,
                 dimensions=(400, 300)
-            )
+        )
             window.run()
         except Exception as e:
             logger.error(f"Error showing about: {e}")
@@ -534,16 +534,16 @@ class TauriIntegratedTray(rumps.App):
                 title="Restart CelFlow?",
                 message="This will restart all CelFlow components.\nAre you sure?",
                 dimensions=(300, 100),
-                ok="Restart",
-                cancel="Cancel"
-            )
-            
+            ok="Restart",
+            cancel="Cancel"
+        )
+        
             if not window.run().clicked:
                 return
                 
-            # Stop desktop app if running
-            self.desktop_launcher.stop_desktop_app()
-            
+                # Stop desktop app if running
+                    self.desktop_launcher.stop_desktop_app()
+                
             # Use the launch script to restart
             script_path = Path("launch_celflow.sh")
             if script_path.exists():
@@ -555,8 +555,8 @@ class TauriIntegratedTray(rumps.App):
                     subtitle="Restart Failed",
                     message="Launch script not found"
                 )
-        except Exception as e:
-            logger.error(f"Error restarting system: {e}")
+            except Exception as e:
+                logger.error(f"Error restarting system: {e}")
     
     @rumps.clicked("🛑 Stop System")
     def stop_system(self, _):
@@ -567,16 +567,16 @@ class TauriIntegratedTray(rumps.App):
                 title="Stop CelFlow?",
                 message="This will stop all CelFlow components.\nAre you sure?",
                 dimensions=(300, 100),
-                ok="Stop",
-                cancel="Cancel"
-            )
-            
+            ok="Stop",
+            cancel="Cancel"
+        )
+        
             if not window.run().clicked:
                 return
             
-            # Stop desktop app if running
-            self.desktop_launcher.stop_desktop_app()
-            
+                # Stop desktop app if running
+                    self.desktop_launcher.stop_desktop_app()
+                
             # Use the launch script to stop
             script_path = Path("launch_celflow.sh")
             if script_path.exists():
@@ -588,11 +588,11 @@ class TauriIntegratedTray(rumps.App):
                     subtitle="Stop Failed",
                     message="Launch script not found"
                 )
-            
+                
             # Quit the tray app
-            rumps.quit_application()
-        except Exception as e:
-            logger.error(f"Error stopping system: {e}")
+                rumps.quit_application()
+            except Exception as e:
+                logger.error(f"Error stopping system: {e}")
 
 
 def create_tauri_integrated_tray(
@@ -604,7 +604,7 @@ def create_tauri_integrated_tray(
     if not RUMPS_AVAILABLE:
         logger.error("Cannot create tray - rumps not available")
         return None
-        
+    
     try:
         tray = TauriIntegratedTray(agent_manager, config)
         logger.info("Tauri-integrated tray created successfully")

@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import "./index.css";
+import SystemStatsDashboard from "./components/SystemStatsDashboard";
+import VisualizationEngine from "./components/VisualizationEngine";
+import RealTimeDataStream from "./components/RealTimeDataStream";
 
 // Types
 interface Message {
@@ -11,11 +14,13 @@ interface Message {
 }
 
 interface VisualizationData {
-  type: 'chart' | 'plot' | 'table' | 'graph' | 'text' | 'code';
+  type: 'line' | 'bar' | 'pie' | 'doughnut' | 'radar' | 'scatter' | 'heatmap' | 'network' | 'd3_custom' | 'plotly' | 'system_dashboard' | 'chart' | 'plot' | 'table' | 'graph' | 'text' | 'code';
   title?: string;
   data?: any;
   config?: any;
   content?: string;
+  realTimeData?: boolean;
+  updateInterval?: number;
 }
 
 interface ChatResponse {
@@ -75,6 +80,8 @@ function App() {
       setAiStatus(null);
     }
   };
+
+
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -152,8 +159,144 @@ function App() {
     }
   };
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsLoading(true);
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch(`${API_BASE}/multimodal/upload`, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        
+        // Add file upload message
+        const fileMessage: Message = {
+          id: Date.now().toString(),
+          text: `📎 Uploaded: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`,
+          sender: 'user',
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, fileMessage]);
+
+        // Add AI analysis response
+        if (result.success && result.ai_analysis) {
+          const aiMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            text: result.ai_analysis,
+            sender: 'ai',
+            timestamp: new Date(),
+            visualization: result.analysis ? {
+              type: result.type === 'image' ? 'chart' : 'table',
+              title: `${result.type.toUpperCase()} Analysis: ${file.name}`,
+              data: result.analysis,
+              content: JSON.stringify(result.analysis, null, 2)
+            } : undefined
+          };
+          setMessages(prev => [...prev, aiMessage]);
+        }
+      } else {
+        throw new Error('File upload failed');
+      }
+    } catch (error) {
+      console.error('File upload error:', error);
+      const errorMessage: Message = {
+        id: Date.now().toString(),
+        text: 'Sorry, there was an error processing your file. Please try again.',
+        sender: 'ai',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+      // Clear the file input
+      e.target.value = '';
+    }
+  };
+
+  const captureScreenshot = async () => {
+    setIsLoading(true);
+    
+    try {
+      const response = await fetch(`${API_BASE}/multimodal/screenshot`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        
+        // Add screenshot message
+        const screenshotMessage: Message = {
+          id: Date.now().toString(),
+          text: '📸 Screenshot captured and analyzed',
+          sender: 'user',
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, screenshotMessage]);
+
+        // Add AI analysis response
+        if (result.success && result.ai_analysis) {
+          const aiMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            text: result.ai_analysis,
+            sender: 'ai',
+            timestamp: new Date(),
+            visualization: result.analysis ? {
+              type: 'chart',
+              title: 'Screenshot Analysis',
+              data: result.analysis,
+              content: JSON.stringify(result.analysis, null, 2)
+            } : undefined
+          };
+          setMessages(prev => [...prev, aiMessage]);
+          
+          // Show screenshot analysis in visualization stage
+          if (result.analysis) {
+            setCurrentVisualization({
+              type: 'chart',
+              title: 'Screenshot Analysis',
+              data: result.analysis,
+              content: JSON.stringify(result.analysis, null, 2)
+            });
+          }
+        }
+      } else {
+        throw new Error('Screenshot capture failed');
+      }
+    } catch (error) {
+      console.error('Screenshot error:', error);
+      const errorMessage: Message = {
+        id: Date.now().toString(),
+        text: 'Sorry, there was an error capturing the screenshot. Please try again.',
+        sender: 'ai',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const renderVisualization = (viz: VisualizationData) => {
+    // Use the new VisualizationEngine for advanced chart types
+    if (['line', 'bar', 'pie', 'doughnut', 'radar', 'scatter', 'heatmap', 'network', 'd3_custom', 'plotly'].includes(viz.type)) {
+      return <VisualizationEngine visualization={viz} />;
+    }
+
+    // Legacy visualization types for backward compatibility
     switch (viz.type) {
+      case 'system_dashboard':
+        return <SystemStatsDashboard />;
       case 'chart':
         return (
           <div className="bg-gray-800 rounded-lg p-6 border border-gray-600">
@@ -253,7 +396,15 @@ function App() {
                   <div>Agents: <span className="text-purple-400">{aiStatus.agents_active}</span></div>
                 </>
               ) : (
-                <div className="text-red-400">Offline</div>
+                <div className="flex items-center justify-between">
+                  <div className="text-red-400">Offline</div>
+                  <button
+                    onClick={checkAiHealth}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-1.5 py-0.5 rounded text-xs transition-colors"
+                  >
+                    Retry
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -316,6 +467,31 @@ function App() {
         
         {/* Input area */}
         <div className="p-4 border-t border-gray-700">
+          {/* File upload area */}
+          <div className="mb-3">
+            <input
+              type="file"
+              id="file-upload"
+              accept=".jpg,.jpeg,.png,.bmp,.tiff,.webp,.csv,.json,.xlsx,.tsv,.py,.js,.ts,.html,.css,.yaml,.yml,.md,.pdf,.txt"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+            <label
+              htmlFor="file-upload"
+              className="flex items-center justify-center w-full p-3 border-2 border-dashed border-gray-600 rounded-lg cursor-pointer hover:border-blue-500 transition-colors"
+            >
+              <div className="text-center">
+                <div className="text-2xl mb-1">📎</div>
+                <div className="text-xs text-gray-400">
+                  Upload images, data files, or code for AI analysis
+                </div>
+                <div className="text-xs text-gray-500 mt-1">
+                  Supports: Images, CSV, JSON, Python, JS, PDF, etc.
+                </div>
+              </div>
+            </label>
+          </div>
+          
           <div className="flex space-x-2">
             <input
               type="text"
@@ -403,6 +579,24 @@ function App() {
               className="bg-purple-600/20 hover:bg-purple-600/40 text-purple-400 px-3 py-1 rounded transition-colors"
             >
               📋 Data Table
+            </button>
+            <button 
+              onClick={captureScreenshot}
+              className="bg-orange-600/20 hover:bg-orange-600/40 text-orange-400 px-3 py-1 rounded transition-colors"
+            >
+              📸 Screenshot
+            </button>
+            <button 
+              onClick={() => setCurrentVisualization({
+                type: 'system_dashboard',
+                title: 'Real-Time System Performance',
+                data: {},
+                realTimeData: true,
+                updateInterval: 3000
+              })}
+              className="bg-cyan-600/20 hover:bg-cyan-600/40 text-cyan-400 px-3 py-1 rounded transition-colors"
+            >
+              📊 Live Metrics
             </button>
             <button 
               onClick={() => setCurrentVisualization(null)}

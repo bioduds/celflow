@@ -174,10 +174,14 @@ ollama>=0.1.0             # Ollama Python client for local AI models
 aiohttp>=3.8.0            # Async HTTP for Ollama API (already included above)
 tiktoken>=0.5.0           # Token counting for context management
 pydantic>=2.0.0           # Data validation for AI responses
-tenacity>=8.0.0           # Retry logic for AI calls
+tenacity>=8.0.0           # Retry logic for AI calls 
 
 # FastAPI and API server dependencies
 fastapi>=0.104.1
 uvicorn[standard]>=0.24.0
 pydantic>=2.5.0
-python-multipart>=0.0.6 
+python-multipart>=0.0.6
+
+# Document Processing
+openpyxl>=3.1.5           # Excel file processing
+PyPDF2>=3.0.1             # PDF document processing 

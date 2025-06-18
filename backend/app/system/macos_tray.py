@@ -33,7 +33,7 @@ class MacOSTray(rumps.App):
         config: Optional[Dict[str, Any]] = None
     ):
         super().__init__("🧬", quit_button=None)
-        
+
         self.agent_manager = agent_manager
         self.config = config or {}
         self.central_brain = None
@@ -43,7 +43,7 @@ class MacOSTray(rumps.App):
         
         # Initialize AI brain in background
         self._initialize_ai_brain()
-        
+
         logger.info("MacOS tray initialized")
     
     def _setup_menu(self) -> None:
@@ -91,16 +91,16 @@ class MacOSTray(rumps.App):
     
     def _initialize_ai_brain(self) -> None:
         """Initialize the central AI brain in a background thread"""
-        def init_brain():
-            try:
+            def init_brain():
+                try:
                 self.central_brain = create_central_brain()
                 logger.info("Central AI brain initialized successfully")
-            except Exception as e:
+                except Exception as e:
                 logger.error(f"Failed to initialize central brain: {e}")
-        
+
         # Start initialization in background
-        threading.Thread(target=init_brain, daemon=True).start()
-    
+            threading.Thread(target=init_brain, daemon=True).start()
+
     @rumps.clicked("📊 System Status")
     def show_system_status(self, _):
         """Show system status window"""
@@ -158,7 +158,7 @@ class MacOSTray(rumps.App):
             window.run()
         except Exception as e:
             logger.error(f"Error showing agent status: {e}")
-    
+
     @rumps.clicked("🥚 Embryo Pool")
     def show_embryo_pool(self, _):
         """Show embryo pool status"""
@@ -170,7 +170,7 @@ class MacOSTray(rumps.App):
                     message="Agent manager not initialized"
                 )
                 return
-                
+
             embryos = self.agent_manager.list_embryos()
             message = f"Embryos in Pool: {len(embryos)}\n\n"
             
@@ -348,7 +348,7 @@ class MacOSTray(rumps.App):
                 )
             
             # Quit the tray app
-            rumps.quit_application()
+                rumps.quit_application()
         except Exception as e:
             logger.error(f"Error stopping system: {e}")
 
@@ -362,7 +362,7 @@ def create_macos_tray(
     if not RUMPS_AVAILABLE:
         logger.error("Cannot create tray - rumps not available")
         return None
-        
+
     try:
         tray = MacOSTray(agent_manager, config)
         logger.info("MacOS tray created successfully")
@@ -381,5 +381,5 @@ def main():
     tray = create_macos_tray()
     if tray:
         tray.run()
-    else:
+        else:
         print("Error: Failed to create tray application")

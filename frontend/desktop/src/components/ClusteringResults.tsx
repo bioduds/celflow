@@ -1,29 +1,19 @@
 import React from 'react';
-import { ClusteringResult, ConsensusResults, ClusteringAlgorithm } from "../types/celflow";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ScatterChart, Scatter } from "recharts";
-import { Award, Target, TrendingUp, Layers } from "lucide-react";
+import { ClusteringResult, ClusteringAlgorithm } from "../types/celflow";
 
 interface ClusteringResultsProps {
-  clusteringResults: Record<ClusteringAlgorithm, ClusteringResult>;
-  consensus: ConsensusResults;
+  results: {
+    [key in ClusteringAlgorithm]?: ClusteringResult;
+  };
 }
 
-const ClusteringResults: React.FC<ClusteringResultsProps> = ({ clusteringResults, consensus }) => {
-  const algorithmData = Object.entries(clusteringResults).map(([algorithm, result]) => ({
-    algorithm: algorithm.toUpperCase(),
-    silhouette: result.silhouette_score,
-    clusters: result.n_clusters,
-    calinski: result.calinski_harabasz_score / 100, // Scale for visualization
-    isBest: algorithm === consensus.best_algorithm
-  }));
-
-  const bestResult = consensus.best_algorithm ? clusteringResults[consensus.best_algorithm] : null;
-  const clusterData = bestResult ? Object.entries(bestResult.cluster_analysis).map(([id, analysis]) => ({
-    id: `Cluster ${id}`,
-    size: analysis.size,
-    percentage: analysis.percentage,
-    pattern: analysis.dominant_pattern
-  })) : [];
+const ClusteringResults: React.FC<ClusteringResultsProps> = ({ results }) => {
+  // Find the best result based on silhouette score
+  const bestResult = Object.values(results).reduce((best, current) => {
+    if (!best) return current;
+    if (!current) return best;
+    return current.silhouette_score > best.silhouette_score ? current : best;
+  }, undefined as ClusteringResult | undefined);
 
   if (!bestResult) {
     return (
@@ -44,64 +34,64 @@ const ClusteringResults: React.FC<ClusteringResultsProps> = ({ clusteringResults
         Clustering Results
       </h2>
 
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Algorithm Info */}
         <div>
           <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-4">
             Algorithm Details
-          </h3>
+        </h3>
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
               <div className="text-sm text-gray-500 dark:text-gray-400">
                 Algorithm
-              </div>
+            </div>
               <div className="mt-2">
                 <span className="text-xl font-semibold text-gray-800 dark:text-white">
                   {bestResult.algorithm}
                 </span>
-              </div>
+          </div>
             </div>
             <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
               <div className="text-sm text-gray-500 dark:text-gray-400">
                 Number of Clusters
-              </div>
+          </div>
               <div className="mt-2">
                 <span className="text-xl font-semibold text-gray-800 dark:text-white">
                   {bestResult.n_clusters}
                 </span>
-              </div>
-            </div>
+          </div>
           </div>
         </div>
+      </div>
 
         {/* Metrics */}
         <div>
           <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-4">
             Quality Metrics
-          </h3>
+        </h3>
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
               <div className="text-sm text-gray-500 dark:text-gray-400">
                 Silhouette Score
-              </div>
+        </div>
               <div className="mt-2">
                 <span className="text-xl font-semibold text-gray-800 dark:text-white">
                   {bestResult.silhouette_score.toFixed(3)}
                 </span>
               </div>
-            </div>
+                </div>
             <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
               <div className="text-sm text-gray-500 dark:text-gray-400">
                 Calinski-Harabasz Score
-              </div>
+                </div>
               <div className="mt-2">
                 <span className="text-xl font-semibold text-gray-800 dark:text-white">
                   {bestResult.calinski_harabasz_score.toFixed(1)}
                 </span>
               </div>
             </div>
-          </div>
         </div>
+      </div>
 
         {/* Clusters */}
         <div>
@@ -117,8 +107,8 @@ const ClusteringResults: React.FC<ClusteringResultsProps> = ({ clusteringResults
                   </div>
                   <div className="text-sm text-gray-500 dark:text-gray-400">
                     {cluster.percentage.toFixed(1)}% of data
-                  </div>
-                </div>
+              </div>
+            </div>
 
                 {/* Event Types */}
                 <div className="mb-4">
@@ -130,7 +120,7 @@ const ClusteringResults: React.FC<ClusteringResultsProps> = ({ clusteringResults
                       <div key={type} className="flex justify-between">
                         <span className="text-gray-700 dark:text-gray-300">
                           {type}
-                        </span>
+                      </span>
                         <span className="text-gray-600 dark:text-gray-400">
                           {count.toLocaleString()}
                         </span>
@@ -159,7 +149,7 @@ const ClusteringResults: React.FC<ClusteringResultsProps> = ({ clusteringResults
                       </span>
                       <span className="text-gray-600 dark:text-gray-400">
                         {cluster.time_pattern.peak_day}
-                      </span>
+                          </span>
                     </div>
                   </div>
                 </div>
