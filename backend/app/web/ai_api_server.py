@@ -948,6 +948,88 @@ async def get_supported_formats():
         }
     }
 
+@app.post("/ai/execute-code")
+async def ai_execute_dynamic_code(request: Dict[str, Any]):
+    """
+    Execute dynamic code through the AI's Lambda-like capability.
+    This endpoint allows the AI to run custom code when existing tools aren't sufficient.
+    """
+    if not central_brain:
+        raise HTTPException(status_code=503, detail="AI system not initialized")
+    
+    try:
+        code = request.get("code", "")
+        purpose = request.get("purpose", "general")
+        context = request.get("context", {})
+        use_lambda_style = request.get("use_lambda_style", False)
+        
+        if not code:
+            raise HTTPException(status_code=400, detail="No code provided")
+        
+        # Execute the code through Central AI Brain
+        result = await central_brain.execute_dynamic_code(
+            code=code,
+            purpose=purpose,
+            context=context,
+            use_lambda_style=use_lambda_style
+        )
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"Code execution error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/ai/lambda-templates")
+async def get_lambda_templates():
+    """Get available Lambda-style code templates"""
+    if not central_brain:
+        raise HTTPException(status_code=503, detail="AI system not initialized")
+    
+    try:
+        from ..ai.code_executor import LAMBDA_TEMPLATES
+        
+        templates = {}
+        for name, code in LAMBDA_TEMPLATES.items():
+            template_info = await central_brain.get_lambda_template(name)
+            templates[name] = template_info
+        
+        return {
+            "success": True,
+            "templates": templates,
+            "total_templates": len(templates)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting lambda templates: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/ai/decide-code-execution")
+async def decide_code_execution(request: Dict[str, Any]):
+    """
+    Let the AI decide whether to use existing tools or write custom code.
+    """
+    if not central_brain:
+        raise HTTPException(status_code=503, detail="AI system not initialized")
+    
+    try:
+        user_request = request.get("user_request", "")
+        available_tools = request.get("available_tools", [
+            "chat", "visualization", "file_analysis", "system_monitoring",
+            "pattern_detection", "agent_orchestration"
+        ])
+        
+        if not user_request:
+            raise HTTPException(status_code=400, detail="No user request provided")
+        
+        decision = await central_brain.decide_code_execution(user_request, available_tools)
+        
+        return decision
+        
+    except Exception as e:
+        logger.error(f"Decision error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 if __name__ == "__main__":
     uvicorn.run(
         "app.web.ai_api_server:app",

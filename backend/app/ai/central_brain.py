@@ -16,6 +16,7 @@ from .embryo_trainer import EmbryoTrainer
 from .system_controller import SystemController
 from .pattern_validator import PatternValidator
 from .proactive_suggestion_engine import ProactiveSuggestionEngine
+from .code_executor import code_executor, ai_execute_code, LAMBDA_TEMPLATES
 
 # Import voice interface
 try:
@@ -298,7 +299,8 @@ Your core capabilities:
 - Execute user commands by coordinating with specialized agents
 - Provide system status and insights
 - Offer proactive suggestions based on user patterns
-- Learn and adapt from interactions"""
+- Learn and adapt from interactions
+- Execute dynamic Python code when existing tools are insufficient (Lambda capability)"""
 
         if context_type == "chat":
             return (
@@ -1086,6 +1088,139 @@ Your core capabilities:
         except Exception as e:
             logger.error(f"Error getting voice status: {e}")
             return {"success": False, "error": str(e), "status": {}}
+    
+    async def execute_dynamic_code(self, 
+                                  code: str, 
+                                  purpose: str = "general",
+                                  context: Dict[str, Any] = None,
+                                  use_lambda_style: bool = False) -> Dict[str, Any]:
+        """
+        Execute dynamic code in a sandboxed environment.
+        This is the AI's 'Lambda' capability - run code on-demand when existing tools aren't sufficient.
+        
+        Args:
+            code: Python code to execute
+            purpose: Purpose of execution ('calculation', 'visualization', 'data_processing', etc.)
+            context: Variables to inject into the execution environment
+            use_lambda_style: If True, expects code to define a handler(event, context) function
+            
+        Returns:
+            Execution results including output, errors, and optionally visualizations
+        """
+        try:
+            logger.info(f"🧠 AI executing dynamic code for purpose: {purpose}")
+            
+            # Add system context
+            execution_context = context or {}
+            execution_context.update({
+                'celflow_version': '1.0.0',
+                'ai_model': self.ai_config.get('model_name', 'gemma3:4b'),
+                'execution_purpose': purpose,
+                'timestamp': datetime.now().isoformat()
+            })
+            
+            if use_lambda_style:
+                # Execute as Lambda function
+                event = execution_context.get('event', {})
+                lambda_context = execution_context.get('lambda_context', {})
+                result = await code_executor.execute_lambda_function(code, event, lambda_context)
+            else:
+                # Execute as regular code
+                result = await ai_execute_code(code, purpose, execution_context)
+            
+            # Log execution for learning
+            if result.get('success'):
+                logger.info(f"✅ Code execution successful for {purpose}")
+                # Store successful patterns for future reference
+                await self.context_manager.update_context({
+                    'code_execution': {
+                        'purpose': purpose,
+                        'success': True,
+                        'code_snippet': code[:200] + '...' if len(code) > 200 else code,
+                        'timestamp': datetime.now().isoformat()
+                    }
+                })
+            else:
+                logger.warning(f"⚠️ Code execution failed: {result.get('error')}")
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"❌ Error in execute_dynamic_code: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "execution_id": datetime.now().isoformat()
+            }
+    
+    async def get_lambda_template(self, template_type: str) -> Dict[str, Any]:
+        """
+        Get a Lambda-style template for the AI to use as a starting point.
+        
+        Args:
+            template_type: Type of template ('data_processor', 'chart_generator', 'custom_analysis')
+            
+        Returns:
+            Template code and usage instructions
+        """
+        if template_type in LAMBDA_TEMPLATES:
+            return {
+                "success": True,
+                "template_type": template_type,
+                "code": LAMBDA_TEMPLATES[template_type],
+                "usage": f"Modify this template for {template_type} tasks. Call handler(event, context) with appropriate data.",
+                "example_event": {
+                    "data_processor": {"data": [1, 2, 3, 4, 5]},
+                    "chart_generator": {"chart_type": "bar", "data": [10, 20, 30], "title": "Sample Chart"},
+                    "custom_analysis": {"input": "Sample text", "type": "sentiment"}
+                }.get(template_type, {})
+            }
+        else:
+            return {
+                "success": False,
+                "error": f"Unknown template type: {template_type}",
+                "available_templates": list(LAMBDA_TEMPLATES.keys())
+            }
+    
+    async def decide_code_execution(self, user_request: str, available_tools: list) -> Dict[str, Any]:
+        """
+        AI decides whether to use existing tools or write custom code.
+        
+        Args:
+            user_request: What the user is asking for
+            available_tools: List of available tools/capabilities
+            
+        Returns:
+            Decision on whether to use code execution and suggested approach
+        """
+        # Ask the AI to analyze the request
+        decision_prompt = f"""Analyze this user request and determine if it requires custom code execution:
+
+User Request: {user_request}
+
+Available Tools: {', '.join(available_tools)}
+
+Consider:
+1. Can this be done with existing tools?
+2. Would custom code provide a better solution?
+3. What type of code would be needed?
+
+Respond with:
+- use_code: true/false
+- reason: explanation of decision
+- suggested_approach: brief description
+- code_purpose: 'calculation', 'visualization', 'data_processing', or 'custom'"""
+
+        response = await self.ollama_client.generate_response(
+            prompt=decision_prompt,
+            system_prompt="You are an AI assistant that helps decide when to use custom code execution."
+        )
+        
+        # Parse the response (in a real implementation, this would be more structured)
+        return {
+            "decision": response,
+            "timestamp": datetime.now().isoformat()
+        }
 
 
 # Utility functions

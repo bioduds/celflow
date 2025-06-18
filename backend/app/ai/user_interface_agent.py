@@ -63,6 +63,25 @@ Respond helpfully and naturally to the user's message."""
                 message, context
             )
 
+            # First, check if this request needs code execution
+            needs_code = await self._check_needs_code_execution(message)
+            
+            if needs_code:
+                # Handle code execution request
+                code_result = await self._handle_code_execution_request(message, interaction_context)
+                if code_result.get("success"):
+                    response_time = (datetime.now() - start_time).total_seconds()
+                    return {
+                        "success": True,
+                        "message": code_result.get("message"),
+                        "agent": "user_interface",
+                        "interaction_id": self.interaction_count,
+                        "response_time": response_time,
+                        "context_used": interaction_context is not None,
+                        "code_executed": True,
+                        "execution_result": code_result.get("execution_result")
+                    }
+
             # Format the prompt with context
             formatted_prompt = self._format_prompt(message, interaction_context)
 
@@ -437,5 +456,104 @@ Respond helpfully and naturally to the user's message."""
                 "proactive_suggestions",
                 "system_action_explanation",
                 "user_preference_learning",
+                "dynamic_code_execution",
             ],
         }
+    
+    async def _check_needs_code_execution(self, message: str) -> bool:
+        """Check if the user request requires code execution"""
+        
+        # Keywords that suggest code execution might be needed
+        code_keywords = [
+            "calculate", "compute", "algorithm", "prime numbers", "fibonacci",
+            "factorial", "sort", "analyze data", "process", "transform",
+            "generate", "create visualization", "plot", "graph", "statistics",
+            "machine learning", "predict", "classify", "cluster"
+        ]
+        
+        message_lower = message.lower()
+        
+        # Check for explicit code execution keywords
+        for keyword in code_keywords:
+            if keyword in message_lower:
+                # Use AI to decide if code is really needed
+                decision = await self.central_brain.decide_code_execution(
+                    message,
+                    ["chat", "visualization", "file_analysis", "system_monitoring"]
+                )
+                # Parse the AI's decision (this is simplified - in production would be more robust)
+                return "use_code: true" in decision.get("decision", "").lower()
+        
+        return False
+    
+    async def _handle_code_execution_request(self, message: str, context: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle a request that requires code execution"""
+        
+        try:
+            # First, get the AI to write the code
+            code_prompt = f"""Based on this user request: "{message}"
+            
+Write Python code to solve this problem. Return ONLY the code, no explanations.
+The code should print the final result.
+"""
+            
+            code = await self.central_brain.ollama_client.generate_response(
+                prompt=code_prompt,
+                system_prompt="You are a Python code generator. Return only clean, executable Python code."
+            )
+            
+            # Clean up the code (remove markdown if present)
+            code = code.strip()
+            if code.startswith("```python"):
+                code = code[9:]
+            if code.startswith("```"):
+                code = code[3:]
+            if code.endswith("```"):
+                code = code[:-3]
+            code = code.strip()
+            
+            # Execute the code
+            execution_result = await self.central_brain.execute_dynamic_code(
+                code=code,
+                purpose="calculation",
+                context={"user_request": message}
+            )
+            
+            if execution_result.get("success"):
+                # Format the response
+                output = execution_result.get("stdout", "").strip()
+                result = execution_result.get("result", "")
+                
+                response_message = f"""I've executed the code to solve your request. Here are the results:
+
+**Code executed:**
+```python
+{code}
+```
+
+**Output:**
+{output if output else result}
+
+Is there anything else you'd like me to calculate or analyze?"""
+                
+                return {
+                    "success": True,
+                    "message": response_message,
+                    "execution_result": execution_result
+                }
+            else:
+                # Code execution failed
+                error = execution_result.get("error", "Unknown error")
+                return {
+                    "success": False,
+                    "message": f"I tried to execute code to solve your request, but encountered an error: {error}\n\nLet me try a different approach.",
+                    "execution_result": execution_result
+                }
+                
+        except Exception as e:
+            logger.error(f"Error in code execution handler: {e}")
+            return {
+                "success": False,
+                "message": "I encountered an error while trying to execute code for your request.",
+                "error": str(e)
+            }

@@ -10,6 +10,33 @@ CelFlow is a revolutionary AI system that creates specialized agents based on yo
 - **Complete Privacy**: All processing happens locally on your machine
 - **Lightweight**: 5-12MB footprint vs 150MB+ alternatives
 
+### 🚀 New Features (Phase 1 Complete!)
+
+- **🎨 Advanced Visualization Engine**: 
+  - 10+ chart types (line, bar, pie, scatter, radar, network graphs, heatmaps)
+  - Real-time data streaming with live updates
+  - D3.js, Chart.js, and Plotly.js integration
+  - Interactive visualizations with zoom, pan, and drill-down
+
+- **🧠 AI Lambda Capability**: 
+  - Dynamic code execution sandbox (like AWS Lambda but local)
+  - AI can write and execute Python code on-demand
+  - Secure sandbox with resource limits and safety validation
+  - Perfect for complex calculations, custom algorithms, and data processing
+
+- **📊 Multimodal Processing**:
+  - Image analysis and screenshot capture
+  - CSV/JSON/Excel data processing with AI insights
+  - Code analysis for Python, JavaScript, TypeScript
+  - PDF and document text extraction
+  - Automatic visualization suggestions
+
+- **💬 Enhanced Chat-Stage Coordination**:
+  - AI always talks via chat AND shows via stage
+  - Clean interface with on-demand visualizations
+  - Context-aware responses with conversation memory
+  - Proactive suggestions based on usage patterns
+
 ## Installation
 
 1. Clone the repository:
@@ -71,10 +98,12 @@ CelFlow consists of several key components:
    - Agent management
 
 3. **AI Components**:
-   - Central AI Brain for coordinating agents
-   - Pattern detection system
-   - Agent specialization logic
-   - Embryo development pool
+   - Central AI Brain with Gemma 3:4b for coordinating agents
+   - Pattern detection system with advanced clustering
+   - Agent specialization logic with embryo training
+   - Dynamic code execution sandbox (Lambda capability)
+   - Multimodal processing for images, data, and code
+   - Real-time visualization engine
 
 ## Development
 
@@ -167,6 +196,38 @@ CelFlow consists of several integrated components:
 4. **Agent Birth**: Specialized agents emerge when patterns reach maturity
 5. **Continuous Evolution**: Agents adapt and improve based on feedback
 
+## 🧠 AI Lambda Capability
+
+CelFlow's AI can now write and execute custom Python code on-demand, similar to AWS Lambda but running locally:
+
+### When AI Uses Code Execution
+
+The AI automatically recognizes when to use code execution for:
+- Complex mathematical calculations (prime numbers, Fibonacci, factorials)
+- Data processing and transformation
+- Custom algorithm implementation
+- Statistical analysis and machine learning
+- Dynamic visualization generation
+
+### Example Interactions
+
+**User**: "Calculate the first 20 prime numbers"
+**AI**: *Writes and executes code, returns actual results*
+
+**User**: "Analyze this CSV file and show me correlations"
+**AI**: *Processes data with pandas, generates visualization*
+
+**User**: "Create a custom sorting algorithm for my specific needs"
+**AI**: *Implements and tests the algorithm in real-time*
+
+### Security Features
+
+- AST-based code validation prevents dangerous operations
+- Resource limits (memory and execution time)
+- Sandboxed execution environment
+- Whitelisted imports only
+- No file system or network access
+
 ## 🛠️ Usage
 
 ### Basic Commands
@@ -219,23 +280,46 @@ CelFlow can be configured through YAML files in the `config/` directory:
 
 CelFlow development follows a structured approach:
 
-### Phase 1: Foundation ✅
-- Event capture system
-- Basic pattern detection
-- Data persistence
-- System tray integration
+### Phase 1: Real Visualization Engine Foundation ✅ COMPLETE!
+- ✅ Advanced visualization library integration (Chart.js, D3.js, Plotly.js)
+- ✅ 10+ interactive chart types with real-time updates
+- ✅ Live data streaming from CelFlow systems
+- ✅ Network graphs for clustering and relationships
+- ✅ Heatmaps and 3D visualization support
 
-### Phase 2: Intelligence 🔄
-- Central AI brain
-- Advanced pattern recognition
-- Embryo development system
-- Agent orchestration
+### Phase 1.6: Multimodal AI Capabilities ✅ COMPLETE!
+- ✅ Image processing and screenshot analysis
+- ✅ CSV/JSON/Excel file processing with AI insights
+- ✅ Code analysis and documentation generation
+- ✅ PDF and document text extraction
+- ✅ Mermaid diagram generation
 
-### Phase 3: Evolution 📋
-- Agent birth and specialization
-- Meta-learning capabilities
-- Advanced user interaction
-- Performance optimization
+### Phase 1.5: Context & Memory System ✅ COMPLETE!
+- ✅ Persistent conversation memory
+- ✅ Context-aware responses
+- ✅ Session management
+- ✅ Smart context pruning
+
+### NEW: AI Lambda Capability ✅ COMPLETE!
+- ✅ Dynamic code execution sandbox
+- ✅ AI can write and execute Python code on-demand
+- ✅ Secure execution with resource limits
+- ✅ Lambda-style event-driven functions
+- ✅ Matplotlib visualization generation
+
+### Phase 2: Enhanced Central AI Agent 🔄 NEXT
+- Multi-modal response system
+- Intent classification engine
+- System introspection capabilities
+- Dynamic visualization generation
+- Proactive insights and suggestions
+
+### Phase 3: Web Search & Context Intelligence 📋
+- Web search API integration
+- Information extraction and summarization
+- Smart context management
+- Knowledge base building
+- Cross-domain knowledge linking
 
 ## 🔒 Privacy & Security
 
