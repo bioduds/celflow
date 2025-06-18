@@ -285,11 +285,21 @@ async def chat_with_ai(message: ChatMessage):
         response_time = (datetime.now() - start_time).total_seconds()
         ai_message = result.get("message", "")
         
+        # Check if code was executed
+        execution_result = result.get("execution_result")
+        code_executed = result.get("code_executed", False)
+        
         # Generate visualization if requested or if message contains visualization keywords
         visualization = None
         if (message.request_visualization or 
-            any(keyword in message.message.lower() for keyword in ['plot', 'chart', 'graph', 'table', 'analyze', 'show', 'visualize'])):
-            visualization = await generate_visualization(message.message, ai_message)
+            any(keyword in message.message.lower() for keyword in ['plot', 'chart', 'graph', 'table', 'analyze', 'show', 'visualize']) or
+            (execution_result and execution_result.get("success"))):
+            # Only pass execution_result if code was actually executed
+            visualization = await generate_visualization(
+                message.message, 
+                ai_message, 
+                execution_result if code_executed else None
+            )
         
         # Store AI response with visualization data
         conversation_memory.add_message(
@@ -394,10 +404,115 @@ async def process_blob_command(command: BlobCommand):
         logger.error(f"Blob command error: {e}")
         return {"success": False, "error": str(e)}
 
-async def generate_visualization(user_message: str, ai_response: str) -> Optional[VisualizationData]:
-    """Generate visualization data based on user request and AI response"""
+async def generate_visualization(user_message: str, ai_response: str, execution_result: Optional[Dict[str, Any]] = None) -> Optional[VisualizationData]:
+    """Generate visualization data based on user request and AI response
+    
+    Args:
+        user_message: The user's original message
+        ai_response: The AI's response text
+        execution_result: Optional code execution results containing data to visualize
+    """
     try:
-        # Check if user is asking for specific visualization types
+        # If we have execution results with visualization data, use that first
+        if execution_result and execution_result.get("visualization"):
+            viz_data = execution_result["visualization"]
+            if viz_data.get("type") == "image" and viz_data.get("data"):
+                # This is a matplotlib figure captured as base64 PNG
+                return VisualizationData(
+                    type="image",
+                    title="Generated Visualization",
+                    content=f"data:image/png;base64,{viz_data['data']}"
+                )
+            else:
+                return VisualizationData(
+                    type=viz_data.get("type", "image"),
+                    title="Code Execution Result",
+                    data=viz_data.get("data"),
+                    content=viz_data.get("content")
+                )
+        
+        # Check if we have execution results with data to visualize
+        if execution_result and execution_result.get("success"):
+            stdout = execution_result.get("stdout", "")
+            
+            # Try to parse data from stdout for visualization
+            if "prime" in user_message.lower() and any(chart_type in user_message.lower() for chart_type in ["chart", "plot", "graph"]):
+                # Extract prime numbers from output
+                import re
+                numbers = re.findall(r'\d+', stdout)
+                if numbers and len(numbers) > 1:
+                    prime_numbers = [int(n) for n in numbers if int(n) > 1][:20]  # Limit to 20
+                    
+                    if "line" in user_message.lower():
+                        return VisualizationData(
+                            type="line",
+                            title="Prime Numbers Visualization",
+                            data={
+                                "labels": [str(i+1) for i in range(len(prime_numbers))],
+                                "datasets": [{
+                                    "label": "Prime Numbers",
+                                    "data": prime_numbers,
+                                    "borderColor": "rgb(75, 192, 192)",
+                                    "backgroundColor": "rgba(75, 192, 192, 0.2)",
+                                    "tension": 0.1
+                                }]
+                            }
+                        )
+                    elif "bar" in user_message.lower():
+                        return VisualizationData(
+                            type="bar",
+                            title="Prime Numbers Bar Chart",
+                            data={
+                                "labels": [f"P{i+1}" for i in range(len(prime_numbers))],
+                                "datasets": [{
+                                    "label": "Prime Value",
+                                    "data": prime_numbers,
+                                    "backgroundColor": "rgba(54, 162, 235, 0.8)",
+                                    "borderColor": "rgba(54, 162, 235, 1)",
+                                    "borderWidth": 1
+                                }]
+                            }
+                        )
+            
+            # For hash function results
+            if "hash" in user_message.lower() and "->" in stdout:
+                # Parse hash results
+                hash_results = []
+                labels = []
+                for line in stdout.split('\n'):
+                    if '->' in line:
+                        parts = line.split('->')
+                        if len(parts) == 2:
+                            label = parts[0].strip()
+                            value = parts[1].strip()
+                            try:
+                                labels.append(label)
+                                hash_results.append(int(value))
+                            except:
+                                pass
+                
+                if hash_results:
+                    return VisualizationData(
+                        type="bar",
+                        title="Hash Function Results",
+                        data={
+                            "labels": labels,
+                            "datasets": [{
+                                "label": "Hash Values",
+                                "data": hash_results,
+                                "backgroundColor": [
+                                    "rgba(255, 99, 132, 0.8)",
+                                    "rgba(54, 162, 235, 0.8)",
+                                    "rgba(255, 205, 86, 0.8)",
+                                    "rgba(75, 192, 192, 0.8)",
+                                    "rgba(153, 102, 255, 0.8)"
+                                ][:len(hash_results)],
+                                "borderWidth": 2
+                            }]
+                        }
+                    )
+        
+        # Fall back to keyword-based visualization generation
         message_lower = user_message.lower()
         
         if any(keyword in message_lower for keyword in ['system', 'stats', 'statistics', 'dashboard', 'monitor', 'performance']):
