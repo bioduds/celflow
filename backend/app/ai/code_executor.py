@@ -92,7 +92,9 @@ class CodeExecutionSandbox:
                             return False, f"Import '{alias.name}' is not allowed"
                 
                 if isinstance(node, ast.ImportFrom):
-                    if node.module not in self.allowed_imports:
+                    # Allow submodules of allowed packages
+                    base_module = node.module.split('.')[0] if node.module else None
+                    if base_module not in self.allowed_imports:
                         return False, f"Import from '{node.module}' is not allowed"
             
             return True, ""
