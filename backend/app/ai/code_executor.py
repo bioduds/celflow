@@ -448,5 +448,77 @@ def handler(event, context):
         'statusCode': 200,
         'result': 'Analysis completed'
     }
+""",
+    
+    "hash_function": """
+import matplotlib.pyplot as plt
+
+def handler(event, context):
+    # Get parameters
+    num_primes = event.get('num_primes', 20)
+    test_count = event.get('test_count', 3)
+    bucket_size = event.get('bucket_size', 100)
+    
+    # Generate prime numbers
+    def is_prime(n):
+        if n <= 1:
+            return False
+        for i in range(2, int(n**0.5) + 1):
+            if n % i == 0:
+                return False
+        return True
+    
+    primes = []
+    num = 2
+    while len(primes) < num_primes:
+        if is_prime(num):
+            primes.append(num)
+        num += 1
+    
+    # Define hash function
+    def simple_hash(data, primes, bucket_size):
+        '''Hash function using prime numbers'''
+        hash_value = 0
+        data_str = str(data)
+        for i, char in enumerate(data_str):
+            prime_index = i % len(primes)
+            hash_value += ord(char) * primes[prime_index]
+        return hash_value % bucket_size
+    
+    # Generate test results
+    test_data = ['hello', 'world', 'celflow', 'ai', 'hash', 'function', 'test', 'data'][:test_count]
+    results = []
+    
+    print(f"Hash Function using first {num_primes} prime numbers")
+    print(f"Prime numbers: {primes}")
+    print(f"\\nTest Results ({test_count} examples):")
+    print("-" * 40)
+    
+    for data in test_data:
+        hash_val = simple_hash(data, primes, bucket_size)
+        results.append(hash_val)
+        print(f"{data:<15} -> {hash_val:>3}")
+    
+    # Create visualization
+    plt.figure(figsize=(10, 6))
+    plt.bar(test_data, results, color='skyblue', edgecolor='navy')
+    plt.title(f'Hash Function Results (bucket size: {bucket_size})')
+    plt.xlabel('Input Data')
+    plt.ylabel('Hash Value')
+    plt.xticks(rotation=45)
+    
+    # Add value labels on bars
+    for i, v in enumerate(results):
+        plt.text(i, v + 0.5, str(v), ha='center', va='bottom')
+    
+    plt.tight_layout()
+    plt.show()
+    
+    return {
+        'statusCode': 200,
+        'primes_used': primes,
+        'test_results': dict(zip(test_data, results)),
+        'visualization': 'bar_chart'
+    }
 """
 } 

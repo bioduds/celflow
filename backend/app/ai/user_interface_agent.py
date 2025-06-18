@@ -7,6 +7,7 @@ import logging
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 from pathlib import Path
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -490,16 +491,45 @@ Respond helpfully and naturally to the user's message."""
         """Handle a request that requires code execution"""
         
         try:
-            # First, get the AI to write the code
-            code_prompt = f"""Based on this user request: "{message}"
+            # Analyze what the user wants
+            analysis_prompt = f"""Analyze this user request: "{message}"
             
-Write Python code to solve this problem. Return ONLY the code, no explanations.
-The code should print the final result.
+Determine:
+1. What specific output they want (e.g., "3 test results" means exactly 3 examples)
+2. Whether a visualization would help (yes/no)
+3. What type of visualization if yes (bar, line, scatter, etc.)
+
+Format your response as:
+OUTPUT_COUNT: [number or 'all']
+NEEDS_VISUALIZATION: [yes/no]
+VISUALIZATION_TYPE: [type or 'none']
 """
+            
+            analysis = await self.central_brain.ollama_client.generate_response(
+                prompt=analysis_prompt,
+                system_prompt="You are analyzing user requirements. Be precise and specific."
+            )
+            
+            # Parse analysis
+            needs_viz = "needs_visualization: yes" in analysis.lower()
+            
+            # Get the AI to write the code with visualization if needed
+            code_prompt = f"""Based on this user request: "{message}"
+
+{analysis}
+
+Write Python code to solve this problem. 
+- If the user asks for N results, provide exactly N results
+- If visualization is needed, create it using matplotlib
+- Add comments explaining what the code does
+- For hash functions, show example usage with test data
+- Print clear, formatted output
+
+Return ONLY the executable Python code."""
             
             code = await self.central_brain.ollama_client.generate_response(
                 prompt=code_prompt,
-                system_prompt="You are a Python code generator. Return only clean, executable Python code."
+                system_prompt="You are a Python code generator. Return clean, well-commented code that solves the exact problem asked."
             )
             
             # Clean up the code (remove markdown if present)
@@ -512,10 +542,10 @@ The code should print the final result.
                 code = code[:-3]
             code = code.strip()
             
-            # Execute the code
+            # Execute the code with visualization support
             execution_result = await self.central_brain.execute_dynamic_code(
                 code=code,
-                purpose="calculation",
+                purpose="visualization" if needs_viz else "calculation",
                 context={"user_request": message}
             )
             
@@ -523,30 +553,45 @@ The code should print the final result.
                 # Format the response
                 output = execution_result.get("stdout", "").strip()
                 result = execution_result.get("result", "")
+                visualization = execution_result.get("visualization")
                 
-                response_message = f"""I've executed the code to solve your request. Here are the results:
+                response_message = f"""I understand you want {self._extract_requirement_summary(message)}. Let me create that for you.
 
 **Code executed:**
 ```python
 {code}
 ```
 
-**Output:**
-{output if output else result}
+**Results:**
+{output if output else result}"""
 
-Is there anything else you'd like me to calculate or analyze?"""
+                # Add visualization info if present
+                if visualization:
+                    response_message += f"\n\n📊 **Visualization created:** {visualization.get('type', 'chart')}"
+                
+                response_message += "\n\nWould you like me to modify the implementation or create additional visualizations?"
                 
                 return {
                     "success": True,
                     "message": response_message,
-                    "execution_result": execution_result
+                    "execution_result": execution_result,
+                    "has_visualization": visualization is not None
                 }
             else:
                 # Code execution failed
                 error = execution_result.get("error", "Unknown error")
+                stderr = execution_result.get("stderr", "")
+                
+                # Try to provide helpful error resolution
+                error_message = f"I encountered an error while executing the code:\n\n**Error:** {error}"
+                if stderr:
+                    error_message += f"\n\n**Details:** {stderr}"
+                
+                error_message += "\n\nLet me try a different approach or would you like to modify the request?"
+                
                 return {
                     "success": False,
-                    "message": f"I tried to execute code to solve your request, but encountered an error: {error}\n\nLet me try a different approach.",
+                    "message": error_message,
                     "execution_result": execution_result
                 }
                 
@@ -554,6 +599,25 @@ Is there anything else you'd like me to calculate or analyze?"""
             logger.error(f"Error in code execution handler: {e}")
             return {
                 "success": False,
-                "message": "I encountered an error while trying to execute code for your request.",
+                "message": "I encountered an error while trying to execute code for your request. Could you please rephrase or provide more details?",
                 "error": str(e)
             }
+    
+    def _extract_requirement_summary(self, message: str) -> str:
+        """Extract a summary of what the user wants"""
+        message_lower = message.lower()
+        
+        if "hash function" in message_lower:
+            if "3 test" in message_lower:
+                return "a hash function using prime numbers with 3 test results"
+            return "a hash function"
+        elif "prime" in message_lower:
+            if match := re.search(r'(\d+)\s*prime', message_lower):
+                return f"the first {match.group(1)} prime numbers"
+            return "prime numbers"
+        elif "fibonacci" in message_lower:
+            return "Fibonacci sequence"
+        elif "factorial" in message_lower:
+            return "factorial calculation"
+        
+        return "your calculation"
