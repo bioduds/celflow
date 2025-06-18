@@ -34,7 +34,7 @@ ChartJS.register(
 );
 
 interface VisualizationData {
-  type: 'line' | 'bar' | 'pie' | 'doughnut' | 'radar' | 'scatter' | 'heatmap' | 'network' | 'd3_custom' | 'plotly' | 'system_dashboard' | 'chart' | 'plot' | 'table' | 'graph' | 'text' | 'code';
+  type: 'line' | 'bar' | 'pie' | 'doughnut' | 'radar' | 'scatter' | 'heatmap' | 'network' | 'd3_custom' | 'plotly' | 'system_dashboard' | 'chart' | 'plot' | 'table' | 'graph' | 'text' | 'code' | 'image';
   title?: string;
   data?: any;
   config?: any;
@@ -305,6 +305,43 @@ export const VisualizationEngine: React.FC<VisualizationEngineProps> = ({
           </div>
         );
 
+      case 'image':
+        // Handle base64 encoded images or direct image URLs
+        const imageSrc = visualization.content || currentData;
+        console.log('Image visualization:', { type: visualization.type, hasContent: !!visualization.content, hasData: !!currentData });
+        console.log('Image src preview:', imageSrc?.substring(0, 100) + '...');
+        
+        // Check if it's a data URL
+        if (imageSrc && imageSrc.startsWith('data:image')) {
+          return (
+            <div className="flex items-center justify-center">
+              <img 
+                src={imageSrc} 
+                alt={visualization.title || 'Generated visualization'}
+                className="max-w-full h-auto rounded-lg shadow-md"
+                style={{ maxHeight: '600px' }}
+                onError={(e) => {
+                  console.error('Image failed to load:', e);
+                  // Fallback to showing error message
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                  target.parentElement!.innerHTML = '<div class="text-red-400">Failed to load image</div>';
+                }}
+              />
+            </div>
+          );
+        } else {
+          // If it's not a proper data URL, show it as text for debugging
+          return (
+            <div className="bg-gray-800 rounded-lg p-6 border border-gray-600">
+              <h3 className="text-lg font-semibold text-red-400 mb-4">Image Data Error</h3>
+              <div className="text-gray-300 text-xs overflow-auto">
+                <pre>{imageSrc?.substring(0, 500)}...</pre>
+              </div>
+            </div>
+          );
+        }
+
       default:
         return (
           <div className="flex items-center justify-center h-64 text-gray-500">
@@ -336,7 +373,7 @@ export const VisualizationEngine: React.FC<VisualizationEngineProps> = ({
         {renderVisualization()}
       </div>
       
-      {visualization.content && (
+      {visualization.content && visualization.type !== 'image' && (
         <div className="mt-4 p-3 bg-gray-50 rounded text-sm">
           <pre className="whitespace-pre-wrap">{visualization.content}</pre>
         </div>

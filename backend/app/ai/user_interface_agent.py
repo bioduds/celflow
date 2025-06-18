@@ -529,6 +529,7 @@ VISUALIZATION_TYPE: [type or 'none']
 Write Python code to solve this problem. 
 - If the user asks for N results, provide exactly N results
 - If visualization is needed, create it using matplotlib
+- DO NOT use plt.show() - the visualization will be captured automatically
 - Add comments explaining what the code does
 - For hash functions, show example usage with test data
 - Print clear, formatted output
@@ -537,10 +538,11 @@ Return ONLY the executable Python code."""
             
             code = await self.central_brain.ollama_client.generate_response(
                 prompt=code_prompt,
-                system_prompt="You are a Python code generator. Return clean, well-commented code that solves the exact problem asked."
+                system_prompt="You are a Python code generator. Return ONLY executable Python code, no explanations. Always include necessary imports like 'import matplotlib.pyplot as plt' at the top."
             )
             
             # Clean up the code (remove markdown if present)
+            logger.info(f"Raw code from AI: {code[:200]}...")
             code = code.strip()
             if code.startswith("```python"):
                 code = code[9:]
@@ -549,11 +551,16 @@ Return ONLY the executable Python code."""
             if code.endswith("```"):
                 code = code[:-3]
             code = code.strip()
+            logger.info(f"Cleaned code: {code[:200]}...")
             
             # Execute the code with visualization support
+            # Always use visualization purpose when there's a chart/plot request
+            use_viz_purpose = needs_viz or any(word in message.lower() for word in ["chart", "plot", "graph", "visualiz"])
+            logger.info(f"Executing code with purpose: {'visualization' if use_viz_purpose else 'calculation'}")
+            
             execution_result = await self.central_brain.execute_dynamic_code(
                 code=code,
-                purpose="visualization" if needs_viz else "calculation",
+                purpose="visualization" if use_viz_purpose else "calculation",
                 context={"user_request": message}
             )
             

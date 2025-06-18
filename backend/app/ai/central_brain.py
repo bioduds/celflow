@@ -1128,6 +1128,15 @@ Your core capabilities:
                 # Execute as regular code
                 result = await ai_execute_code(code, purpose, execution_context)
             
+            # Check if result is None
+            if result is None:
+                logger.error("❌ ai_execute_code returned None!")
+                return {
+                    "success": False,
+                    "error": "Code execution returned no result",
+                    "execution_id": datetime.now().isoformat()
+                }
+            
             # Log execution for learning
             if result.get('success'):
                 logger.info(f"✅ Code execution successful for {purpose}")
@@ -1142,6 +1151,7 @@ Your core capabilities:
                 })
             else:
                 logger.warning(f"⚠️ Code execution failed: {result.get('error')}")
+                logger.warning(f"Full execution result: {result}")
             
             return result
             

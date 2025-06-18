@@ -295,6 +295,10 @@ async def chat_with_ai(message: ChatMessage):
             any(keyword in message.message.lower() for keyword in ['plot', 'chart', 'graph', 'table', 'analyze', 'show', 'visualize']) or
             (execution_result and execution_result.get("success"))):
             # Only pass execution_result if code was actually executed
+            logger.info(f"Generating visualization - code_executed: {code_executed}, execution_result exists: {execution_result is not None}")
+            if execution_result:
+                logger.info(f"Execution result keys: {list(execution_result.keys())}")
+                logger.info(f"Has visualization: {execution_result.get('visualization') is not None}")
             visualization = await generate_visualization(
                 message.message, 
                 ai_message, 
@@ -418,6 +422,7 @@ async def generate_visualization(user_message: str, ai_response: str, execution_
             viz_data = execution_result["visualization"]
             if viz_data.get("type") == "image" and viz_data.get("data"):
                 # This is a matplotlib figure captured as base64 PNG
+                logger.info(f"Creating image visualization with base64 data length: {len(viz_data['data'])}")
                 return VisualizationData(
                     type="image",
                     title="Generated Visualization",

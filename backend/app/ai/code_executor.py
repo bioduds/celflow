@@ -39,7 +39,7 @@ class CodeExecutionSandbox:
             'math', 'random', 'datetime', 'json', 'collections',
             'itertools', 'functools', 'operator', 'string',
             're', 'statistics', 'decimal', 'fractions',
-            'numpy', 'pandas', 'matplotlib', 'seaborn'
+            'numpy', 'pandas', 'matplotlib', 'matplotlib.pyplot', 'seaborn'
         ]
         self.execution_history = []
     
@@ -246,8 +246,15 @@ with open('{f.name}.output', 'w') as out_f:
                 with open(output_file, 'r') as f:
                     output_data = json.load(f)
                 
+                # Check if stderr only contains warnings (not errors)
+                stderr_content = output_data.get('stderr', '')
+                is_only_warnings = (
+                    stderr_content == '' or 
+                    ('UserWarning' in stderr_content and 'cannot be shown' in stderr_content and 'Error:' not in stderr_content)
+                )
+                
                 result = {
-                    "success": output_data.get('stderr', '') == '',
+                    "success": is_only_warnings,
                     "stdout": output_data.get('stdout', ''),
                     "stderr": output_data.get('stderr', ''),
                     "result": output_data.get('result'),

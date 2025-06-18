@@ -14,7 +14,7 @@ interface Message {
 }
 
 interface VisualizationData {
-  type: 'line' | 'bar' | 'pie' | 'doughnut' | 'radar' | 'scatter' | 'heatmap' | 'network' | 'd3_custom' | 'plotly' | 'system_dashboard' | 'chart' | 'plot' | 'table' | 'graph' | 'text' | 'code';
+  type: 'line' | 'bar' | 'pie' | 'doughnut' | 'radar' | 'scatter' | 'heatmap' | 'network' | 'd3_custom' | 'plotly' | 'system_dashboard' | 'chart' | 'plot' | 'table' | 'graph' | 'text' | 'code' | 'image';
   title?: string;
   data?: any;
   config?: any;
@@ -131,6 +131,7 @@ function App() {
         
         // Update main visualization if provided
         if (chatResult.visualization) {
+          console.log('Setting visualization:', chatResult.visualization);
           setCurrentVisualization(chatResult.visualization);
         }
       } else {
@@ -289,7 +290,7 @@ function App() {
 
   const renderVisualization = (viz: VisualizationData) => {
     // Use the new VisualizationEngine for advanced chart types
-    if (['line', 'bar', 'pie', 'doughnut', 'radar', 'scatter', 'heatmap', 'network', 'd3_custom', 'plotly'].includes(viz.type)) {
+    if (['line', 'bar', 'pie', 'doughnut', 'radar', 'scatter', 'heatmap', 'network', 'd3_custom', 'plotly', 'image'].includes(viz.type)) {
       return <VisualizationEngine visualization={viz} />;
     }
 
@@ -362,15 +363,15 @@ function App() {
           </div>
         );
       default:
-        return (
+    return (
           <div className="bg-gray-800 rounded-lg p-6 border border-gray-600">
             <h3 className="text-lg font-semibold text-gray-400 mb-4">Visualization</h3>
             <div className="text-center text-gray-500 py-8">
               🔮 AI-generated visualization will appear here
-            </div>
-          </div>
-        );
-    }
+        </div>
+      </div>
+    );
+  }
   };
 
   // Main UI
